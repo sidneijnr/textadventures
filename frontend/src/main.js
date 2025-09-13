@@ -217,6 +217,16 @@ addCommand("ajuda", {
     }
 });
 
+addCommand("fetch", {
+    f: async (url) => {
+        termPrint("Fazendo fetch para "+url+"...");
+        const result = await fetch(url);
+        const json = await result.json();
+
+        termPrint(JSON.stringify(json, null, 4));
+    }
+})
+
 termPrint(
     'Seja bem vindo! para começar sua aventura, insira "jogar" seguido do nome de um jogo:\n',
     '\n',
