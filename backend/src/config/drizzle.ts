@@ -10,5 +10,8 @@ const connectionString = process.env.POSTGRES_URL;
 if (!connectionString) { throw new Error("POSTGRES_URL is not set in environment variables"); }
 
 // Disable prefetch as it is not supported for "Transaction" pool mode
-export const client = postgres(connectionString, { prepare: false });
-export const db = drizzle(client);
+const client = postgres(connectionString, { prepare: false });
+export const db = drizzle({
+    client,
+    logger: process.env.DEBUGLOG === "true" ? true : false,
+});

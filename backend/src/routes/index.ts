@@ -1,30 +1,17 @@
 import { RequestHandler, Express, ErrorRequestHandler } from "express";
-import { getDocsRouter } from "./docsRoute.ts";
-import { getCommandRouter } from "./commandRoute.ts";
-
-export const logRoutes: RequestHandler = (req,res,next) => {
-	const timestamp = new Date().toISOString();
-
-	let ip = req.headers["x-forwarded-for"] ||
-	req.socket.remoteAddress ||
-	null;
-
-	console.log(timestamp+" "+ip+" "+req.protocol + "://" + req.get("host") + " " + req.method + " " + req.originalUrl);
-	// Log Headers
-	//console.log(JSON.stringify(req.headers));
-	next();
-};
+import { getDocsRouter } from "./docsRoute.js";
+import { getLinhaRouter } from "./linhaRoute.js";
+import { logMiddleware } from "./logMiddleware.js";
 
 const routes = (app: Express) => {
-
 	// Só fazer log das rotas se estiver em desenvolvimento, desativar em produção
 	if(process.env.DEBUGLOG === "true") {
-		app.use(logRoutes);
+		app.use(logMiddleware);
 	}
 
     app.use(
         getDocsRouter(),
-        getCommandRouter()
+        getLinhaRouter()
     );
 
 	app.use((req,res,next) => {
@@ -35,7 +22,7 @@ const routes = (app: Express) => {
 	app.use(((error, req, res, next) => {
         console.error(error);
 		if(!res.headersSent) {
-			res.status(500).json({ error: "Internal Server Error", message: error.message });
+			res.status(500).json({ error: "Erro interno do servidor", message: error.message });
 		}
     }) as ErrorRequestHandler);
 };

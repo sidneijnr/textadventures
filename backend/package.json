@@ -8,7 +8,9 @@
     "start": "node dist/server.js",
     "test": "vitest run",
     "dev": "tsx watch ./server.ts",
-    "db:push": "NODE_OPTIONS='--import tsx' drizzle-kit push"
+    "db:push": "NODE_OPTIONS='--import tsx' drizzle-kit push",
+    "db:clear": "tsx ./src/db/clear.ts",
+    "db:seed": "tsx ./src/db/seed.ts"
   },
   "keywords": [],
   "author": "",

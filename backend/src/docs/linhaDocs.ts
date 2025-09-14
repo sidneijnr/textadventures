@@ -1,5 +1,5 @@
-export const commandPaths = {
-    "/command": {
+export const linhaDocs = {
+    "/linha": {
         post: {
             summary: "Envia um comando para o jogo",
             description: "Envia um comando para o jogo e recebe a resposta.",
@@ -10,13 +10,13 @@ export const commandPaths = {
                         schema: {
                             type: "object",
                             properties: {
-                                command: {
+                                texto: {
                                     type: "string",
                                     example: "olhar",
                                     description: "O comando a ser enviado para o jogo.",
                                 },
                             },
-                            required: ["command"],
+                            required: ["texto"],
                         },
                     },
                 },
@@ -29,13 +29,13 @@ export const commandPaths = {
                             schema: {
                                 type: "object",
                                 properties: {
-                                    response: {
+                                    resposta: {
                                         type: "string",
                                         example: "Você está em uma sala escura. Há uma porta à frente.",
                                         description: "A resposta do jogo ao comando enviado.",
                                     },
                                 },
-                                required: ["response"],
+                                required: ["resposta"],
                             },
                         },
                     },
