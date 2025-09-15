@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { sql } from 'drizzle-orm';
-import { db } from '../config/drizzle.js';
+import { db } from './drizzle.ts';
 
 try {
     console.log('Eliminando todas as tabelas do banco...');

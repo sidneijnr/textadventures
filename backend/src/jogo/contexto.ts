@@ -1,11 +1,12 @@
 // Contexto do jogo a ser usado nas funções das salas e comandos
+import { db } from "../db/drizzle.ts";
 import { Entidade } from "../db/entidadeSchema.ts";
 import { Estado } from "../db/estadoSchema.ts";
 import { Item } from "../db/itemSchema.ts";
 import { Sala } from "../db/salaSchema.ts";
-import { entidadeRepository } from "../repositories/entidadeRepository.ts";
-import { itemRepository } from "../repositories/itemRepository.ts";
-import { salaRepository } from "../repositories/salaRepository.ts";
+import { EntidadeRepository } from "../repositories/entidadeRepository.ts";
+import { ItemRepository } from "../repositories/itemRepository.ts";
+import { SalaRepository } from "../repositories/salaRepository.ts";
 import { getSalaConfig } from "./salas/salas.ts";
 
 export type SalaType = {
@@ -25,7 +26,7 @@ export class Contexto {
     async getMochila() {
         if(this.mochila) return this.mochila;
 
-        this.mochila = await itemRepository.naMochila(this.jogador.id);
+        this.mochila = await ItemRepository.naMochila(db, this.jogador.id);
         return this.mochila;
     }
 
@@ -34,7 +35,7 @@ export class Contexto {
         if(this.itensNoChao) return this.itensNoChao;
 
         const sala = await this.getSala();
-        this.itensNoChao = await itemRepository.noChao(sala.id);
+        this.itensNoChao = await ItemRepository.noChao(db, sala.id);
         return this.itensNoChao;
     }
 
@@ -46,7 +47,7 @@ export class Contexto {
     async getSala() {
         if(this.sala) return this.sala;
         
-        this.sala = await salaRepository.getSalaById(this.jogador.salaId);
+        this.sala = await SalaRepository.getSalaById(db, this.jogador.salaId);
         if (!this.sala) {
             throw new Error("Sala para onde o jogador tentou ir não existe!");
         }
@@ -83,7 +84,7 @@ export class Contexto {
     }
 
     async moverItem(item: Item, onde: { entidadeId?: string } | { salaId?: string } | { itemContainerId?: string }) {
-        await itemRepository.moverItem(item.id, onde);
+        await ItemRepository.moverItem(db, item.id, onde);
 
         this.mochila = null;
         this.itensNoChao = null;
@@ -91,7 +92,7 @@ export class Contexto {
 
     async salvar() {
         if(this._salvarJogador) {
-            await entidadeRepository.atualizar(this.jogador.id, { 
+            await EntidadeRepository.atualizar(db, this.jogador.id, { 
                 salaId: this.jogador.salaId,
                 estado: this.jogador.estado
             });
@@ -99,12 +100,12 @@ export class Contexto {
         }
 
         if(this._salvarSala && this.sala) {
-            await salaRepository.atualizar(this.sala.id, { estado: this.sala.estado });
+            await SalaRepository.atualizar(db, this.sala.id, { estado: this.sala.estado });
             this._salvarSala = false;
         }
 
         if(this._salvarGlobal) {
-            await salaRepository.atualizar(this.global.id, { estado: this.global.estado });
+            await SalaRepository.atualizar(db, this.global.id, { estado: this.global.estado });
             this._salvarGlobal = false;
         }
     }

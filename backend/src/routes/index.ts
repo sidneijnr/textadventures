@@ -10,8 +10,8 @@ const routes = (app: Express) => {
 	}
 
     app.use(
+        getLinhaRouter(),
         getDocsRouter(),
-        getLinhaRouter()
     );
 
 	app.use((req,res,next) => {

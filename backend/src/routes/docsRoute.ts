@@ -1,7 +1,9 @@
 import express from "express";
 import { apiReference } from "@scalar/express-api-reference";
 import swaggerJsDoc from "swagger-jsdoc";
-import getSwaggerOptions from "../docs/head.ts";
+import generateOpenAPIDocs, { apiDocPaths } from "../docs/head.ts";
+import { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
+import { registerDocPaths } from "../utils/docs.ts";
 
 export const getDocsRouter = () => {
     const router = express.Router();
@@ -13,7 +15,12 @@ export const getDocsRouter = () => {
     let swaggerDocs: object | null = null;
     router.get("/reference/openapi.json", (req, res) => {
         if (!swaggerDocs) {
-            swaggerDocs = swaggerJsDoc(getSwaggerOptions());
+            const registry = new OpenAPIRegistry();
+
+            // Registrar os schemas e paths aqui
+            registerDocPaths(registry, apiDocPaths);
+
+            swaggerDocs = swaggerJsDoc(generateOpenAPIDocs(registry));
         }
         res.json(swaggerDocs);
     });

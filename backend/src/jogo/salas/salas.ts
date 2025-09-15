@@ -3,7 +3,12 @@ import { Contexto, SalaType } from "../contexto.ts";
 import { salasInicio } from "./inicio.ts";
 
 export const salas: Record<string, SalaType> = {
-    ...salasInicio
+    ...salasInicio,
+    Global: {
+        descricao: () => "Lógica global que afeta todas as salas. Impossível de acessar diretamente.",
+        conexoes: {},
+        estadoInicial: {}
+    }
 };
 
 export const getSalaConfig = (salaId: string) => {

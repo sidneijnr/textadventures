@@ -1,7 +1,8 @@
 import { getSalaConfig } from "./salas/salas.ts";
 import { Contexto } from "./contexto.ts";
-import { salaRepository } from "../repositories/salaRepository.ts";
-import { entidadeRepository } from "../repositories/entidadeRepository.ts";
+import { SalaRepository } from "../repositories/salaRepository.ts";
+import { EntidadeRepository } from "../repositories/entidadeRepository.ts";
+import { db } from "../db/drizzle.ts";
 
 /**
  * Como só tem 1 rota, é necessário obter a situação atual do usuário parar aplicar o comando
@@ -13,7 +14,7 @@ export const onLinha = async (texto: string, usuario: {id: string}): Promise<str
     // - Obter sala: Qual a situação da sala nesse momento? Quais itens estão no chão? Quais entidades estão presentes?
     // - Obter entidades: Qual a situação delas?
     // - Obter itens: Qual a situação deles?
-    const result = await salaRepository.dadosIniciaisJogador(usuario.id);
+    const result = await SalaRepository.dadosIniciaisJogador(db, usuario.id);
     const ctx: Contexto = new Contexto({
         jogador: result.entidade,
         sala: result.sala,

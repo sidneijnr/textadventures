@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import { tableEntidades } from "../db/entidadeSchema.ts";
 import { Estado } from "../db/estadoSchema.ts";
-import { RepositoryBase } from "./repositoryBase.ts";
+import { DatabaseType } from "../db/drizzle.ts";
 
-class EntidadeRepository extends RepositoryBase {
-    async atualizar(entidadeId: string, dados: { salaId?: string, estado?: Estado } ) {
-        await this.db.update(tableEntidades)
+export class EntidadeRepository {
+    static async atualizar(db: DatabaseType, entidadeId: string, dados: { salaId?: string, estado?: Estado } ) {
+        await db.update(tableEntidades)
         .set({ 
             salaId: dados.salaId,
             estado: dados.estado,
@@ -14,5 +14,3 @@ class EntidadeRepository extends RepositoryBase {
         .where(eq(tableEntidades.id, entidadeId));
     }
 }
-
-export const entidadeRepository = new EntidadeRepository();

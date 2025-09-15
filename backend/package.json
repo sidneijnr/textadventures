@@ -16,13 +16,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.1.0",
     "@scalar/express-api-reference": "^0.8.18",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
     "express": "^5.1.0",
     "postgres": "^3.4.7",
-    "swagger-jsdoc": "^6.2.8"
+    "swagger-jsdoc": "^6.2.8",
+    "zod": "^4.1.8"
   },
   "type": "module",
   "devDependencies": {

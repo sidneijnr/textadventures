@@ -2,6 +2,7 @@
 // https://orm.drizzle.team/docs/get-started/supabase-existing
 // Parece que supabase prefere o uso do "postgres" em vez do "pg"
 import "dotenv/config";
+import { PgDatabase, PgTransaction } from "drizzle-orm/pg-core";
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -15,3 +16,7 @@ export const db = drizzle({
     client,
     logger: process.env.DEBUGLOG === "true" ? true : false,
 });
+
+export type DatabaseType = typeof db;
+export type TransactionType<T extends PgDatabase<any,any,any>> = T extends PgDatabase<infer U,infer K,infer P> ? PgTransaction<U,K,P> : never;
+export type TransactionCallback<T> = (tx: TransactionType<DatabaseType>) => Promise<T>;

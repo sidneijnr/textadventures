@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { randomUUID } from "crypto";
-import { db } from "../config/drizzle.ts";
+import { db } from "./drizzle.ts";
 import { tableSalas } from "./salaSchema.ts";
 import { tableUsers } from "./userSchema.ts";
 import { tableEntidades } from "./entidadeSchema.ts";

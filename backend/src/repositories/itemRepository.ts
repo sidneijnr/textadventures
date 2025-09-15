@@ -1,24 +1,24 @@
 import { eq } from "drizzle-orm";
 import { Item, tableItens } from "../db/itemSchema.ts";
-import { RepositoryBase } from "./repositoryBase.ts";
+import { DatabaseType } from "../db/drizzle.ts";
 
-class ItemRepository extends RepositoryBase {
-    async naMochila(entidadeId: string): Promise<Item[]> {
-        const itens = await this.db.select()
+export class ItemRepository {
+    static async naMochila(db: DatabaseType, entidadeId: string): Promise<Item[]> {
+        const itens = await db.select()
             .from(tableItens)
             .where(eq(tableItens.entidadeId, entidadeId));
         return itens;
     }
 
-    async noChao(salaId: string): Promise<Item[]> {
-        const itens = await this.db.select()
+    static async noChao(db: DatabaseType, salaId: string): Promise<Item[]> {
+        const itens = await db.select()
             .from(tableItens)
             .where(eq(tableItens.salaId, salaId));
         return itens;
     }
 
-    async moverItem(itemId: string, onde: { entidadeId?: string } | { salaId?: string } | { itemContainerId?: string }) {
-        await this.db.update(tableItens)
+    static async moverItem(db: DatabaseType, itemId: string, onde: { entidadeId?: string } | { salaId?: string } | { itemContainerId?: string }) {
+        await db.update(tableItens)
         .set({ 
             entidadeId: "entidadeId" in onde && onde.entidadeId || null,
             salaId: "salaId" in onde && onde.salaId || null,
@@ -28,5 +28,3 @@ class ItemRepository extends RepositoryBase {
         .where(eq(tableItens.id, itemId));
     }
 }
-
-export const itemRepository = new ItemRepository();

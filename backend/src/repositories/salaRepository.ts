@@ -1,14 +1,14 @@
 import { eq, sql } from "drizzle-orm";
 import { Sala, tableSalas } from "../db/salaSchema.ts";
-import { RepositoryBase } from "./repositoryBase.ts";
 import { alias } from "drizzle-orm/pg-core";
 import { tableEntidades } from "../db/entidadeSchema.ts";
 import { Estado } from "../db/estadoSchema.ts";
 import { Item, tableItens } from "../db/itemSchema.ts";
+import { DatabaseType } from "../db/drizzle.ts";
 
-class SalaRepository extends RepositoryBase {
-    public async dadosIniciaisJogador(usuarioId: string) {
-        const itensSubquery = this.db.select({
+export class SalaRepository {
+    static async dadosIniciaisJogador(db: DatabaseType, usuarioId: string) {
+        const itensSubquery = db.select({
             salaId: tableItens.salaId,
             itens: sql<Item[]>`COALESCE(json_agg(${tableItens}.*), '{}')`.as("itens"),
             })
@@ -17,7 +17,7 @@ class SalaRepository extends RepositoryBase {
             .as("itens_sub");
 
         const aliasSalaGlobal = alias(tableSalas, "global");
-        const result = await this.db.select({
+        const result = await db.select({
                 sala: tableSalas,
                 entidade: tableEntidades,
                 global: aliasSalaGlobal,
@@ -45,8 +45,8 @@ class SalaRepository extends RepositoryBase {
         };
     }
 
-    public async getSalaById(salaId: string): Promise<Sala | null> {
-        const result = await this.db.select()
+    static async getSalaById(db: DatabaseType, salaId: string): Promise<Sala | null> {
+        const result = await db.select()
         .from(tableSalas)
         .where(eq(tableSalas.id, salaId))
         .limit(1);
@@ -54,8 +54,8 @@ class SalaRepository extends RepositoryBase {
         return result && result.length > 0 ? result[0] : null;
     }
 
-    async atualizar(salaId: string, dados: { estado: Estado } ) {
-        await this.db.update(tableSalas)
+    static async atualizar(db: DatabaseType, salaId: string, dados: { estado: Estado } ) {
+        await db.update(tableSalas)
         .set({ 
             estado: dados.estado,
             atualizadoEm: new Date() 
@@ -63,5 +63,3 @@ class SalaRepository extends RepositoryBase {
         .where(eq(tableSalas.id, salaId));
     }
 }
-
-export const salaRepository = new SalaRepository();
