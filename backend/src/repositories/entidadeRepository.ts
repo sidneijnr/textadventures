@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { tableEntidades } from "../db/entidadeSchema.ts";
-import { Estado } from "../db/estadoSchema.ts";
-import { DatabaseType } from "../db/drizzle.ts";
+import { type Estado } from "../db/estadoSchema.ts";
+import { type DatabaseType } from "../db/drizzle.ts";
 
 export class EntidadeRepository {
     static async atualizar(db: DatabaseType, entidadeId: string, dados: { salaId?: string, estado?: Estado } ) {

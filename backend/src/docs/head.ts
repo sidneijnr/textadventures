@@ -7,6 +7,8 @@ import {
 } from '@asteasolutions/zod-to-openapi';
 import { itemDocs } from './itemDocs.ts';
 import { salaDocs } from './salaDocs.ts';
+import { type ControllerSchema, type HTTPMethod, type ParsedRequest, type ParsedRequestUndef } from '../utils/docs.ts';
+import z from 'zod';
 
 // https://stackoverflow.com/questions/72133185/deploy-an-express-server-that-uses-express-static-to-serve-a-build-folder-to-ver
 
@@ -50,3 +52,50 @@ const generateOpenAPIDocs = (registry: OpenAPIRegistry) => {
 };
 
 export default generateOpenAPIDocs;
+
+
+
+// ===================================================
+//                Mágica Typescript
+// ===================================================
+// Inferência de tipos para facilitar fazer o fetch
+//
+// A ideia é que você possa fazer o fetchApi passando o método, a rota e o request, 
+// e o TypeScript vai inferir os tipos corretos para você.
+
+// Pega um ControllerSchema de uma rota e método específicos
+export type GetSchema<
+  TPath extends keyof typeof apiDocPaths,
+  TMethod extends keyof (typeof apiDocPaths)[TPath]
+> = (typeof apiDocPaths)[TPath][TMethod] extends { schema: infer S } ? (S extends ControllerSchema<z.ZodType,z.ZodType,z.ZodType,z.ZodType> ? S : never) : never;
+
+// Pega o schema de uma rota e método específicos, e retorna os tipos da requisição (query, body e params)
+export type GetParsedRequest<
+    TPath extends keyof typeof apiDocPaths,
+    TMethod extends keyof (typeof apiDocPaths)[TPath]
+> = GetSchema<TPath, TMethod> extends { query?: infer Q; body?: infer B; params?: infer P}
+    ? 
+    ParsedRequest<Q,B,P>
+    : never;
+
+// Pega o schema de uma rota e método específicos, e retorna os tipos da requisição (query, body e params)
+export type GetParsedRequestUndef<
+    TPath extends keyof typeof apiDocPaths,
+    TMethod extends keyof (typeof apiDocPaths)[TPath]
+> = GetSchema<TPath, TMethod> extends { query?: infer Q; body?: infer B; params?: infer P}
+    ? 
+    ParsedRequestUndef<Q,B,P>
+    : never;
+
+// Pega o schema de uma rota e método específicos, e retorna o tipo de resposta
+export type GetSchemaResponse<
+    TPath extends keyof typeof apiDocPaths,
+    TMethod extends keyof (typeof apiDocPaths)[TPath]
+> = GetSchema<TPath, TMethod> extends ControllerSchema<infer Q, infer B, infer P, infer R>
+    ? (R extends z.ZodType ? z.infer<R> : undefined)
+    : never;
+
+export type TPathFromMethod<TPath extends keyof typeof apiDocPaths, T extends HTTPMethod> = 
+TPath & {
+    [K in TPath]: T extends keyof (typeof apiDocPaths)[K] ? K : never
+}[TPath];

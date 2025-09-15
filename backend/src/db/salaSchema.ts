@@ -1,5 +1,5 @@
 import { pgTable, varchar, jsonb, timestamp } from 'drizzle-orm/pg-core';
-import { Estado, EstadoItem } from './estadoSchema.ts';
+import { type Estado, type EstadoItem } from './estadoSchema.ts';
 
 export const tableSalas = pgTable('salas', {
     // ID da sala que corresponde ao seu código (ex: "sala_do_trono")

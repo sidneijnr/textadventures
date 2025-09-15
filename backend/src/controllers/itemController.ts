@@ -1,4 +1,4 @@
-import { RequestHandler } from "express";
+import { type RequestHandler } from "express";
 import { Contexto } from "../jogo/contexto.ts";
 import { parseRequest } from "../utils/docs.ts";
 import { itemDocs } from "../docs/itemDocs.ts";
@@ -14,7 +14,7 @@ export class ItemController {
         if (objetos.length == 0) {
             ctx.escrevaln("Não tem nada para pegar.");
         } else {
-            const objeto = objetos.find(o => o.tipo === body.item);
+            const objeto = objetos.find(o => o.id === body.item);
             if (!objeto) {
                 ctx.escrevaln("Não tem isso aqui.");
             } else {
@@ -23,7 +23,7 @@ export class ItemController {
         }
 
         await ctx.salvar();
-        res.json({ resposta: ctx.obterTexto() });
+        res.json({ ...ctx.retornarSituacao() });
     }
 
     static largarItem: RequestHandler = async (req, res) => {
@@ -36,7 +36,7 @@ export class ItemController {
         if (objetos.length == 0) {
             ctx.escrevaln("Não tem nada na mochila.");
         } else {
-            const objeto = objetos.find(o => o.tipo === body.item);
+            const objeto = objetos.find(o => o.id === body.item);
             if (!objeto) {
                 ctx.escrevaln("Não tem isso na mochila.");
             } else {
@@ -45,6 +45,6 @@ export class ItemController {
         }
 
         await ctx.salvar();
-        res.json({ resposta: ctx.obterTexto() });
+        res.json({ ...ctx.retornarSituacao() });
     }
 }

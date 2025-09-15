@@ -1,5 +1,6 @@
 import z from "zod";
-import { DocPaths } from "../utils/docs.ts";
+import { type DocPaths } from "../utils/docs.ts";
+import { respostaSituacao } from "./schemas.ts";
 
 export const salaDocs = {
     "/sala/olhar": {
@@ -7,7 +8,22 @@ export const salaDocs = {
             summary: "Descreve a sala atual",
             description: "Retorna a descrição completa da sala onde o jogador se encontra, incluindo saídas, itens no chão e outras entidades visíveis.",
             schema: {
-                response: z.object({
+                response: respostaSituacao.extend({
+                    sala: z.object({
+                        id: z.string().meta({ example: "Inicio" }),
+                        descricao: z.string().meta({
+                            example: "Você está em uma sala iluminada. Há uma porta ao norte e uma janela ao sul.",
+                        }),
+                        conexoes: z.array(z.string()).meta({
+                            example: ["N", "S"],
+                        }),
+                        itens: z.array(z.object({
+                            id: z.uuid().meta({ example: "UUID" }),
+                            tipo: z.string().meta({ example: "pedra" }),
+                            quantidade: z.number().meta({ example: 1 }),
+                            descricao: z.string().meta({ example: "Uma pedra comum." }),
+                        }))
+                    }),
                     resposta: z.string().meta({
                         example: "Está tudo escuro aqui.",
                     }),
@@ -26,11 +42,7 @@ export const salaDocs = {
                         example: "norte",
                     }),
                 }),
-                response: z.object({
-                    resposta: z.string().meta({
-                        example: "Você não pode fazer isso.",
-                    }),
-                })
+                response: respostaSituacao
             }
         }
     }

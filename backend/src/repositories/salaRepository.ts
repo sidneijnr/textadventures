@@ -1,10 +1,10 @@
 import { eq, sql } from "drizzle-orm";
-import { Sala, tableSalas } from "../db/salaSchema.ts";
+import { type Sala, tableSalas } from "../db/salaSchema.ts";
 import { alias } from "drizzle-orm/pg-core";
 import { tableEntidades } from "../db/entidadeSchema.ts";
-import { Estado } from "../db/estadoSchema.ts";
-import { Item, tableItens } from "../db/itemSchema.ts";
-import { DatabaseType } from "../db/drizzle.ts";
+import { type Estado } from "../db/estadoSchema.ts";
+import { type Item, tableItens } from "../db/itemSchema.ts";
+import { type DatabaseType } from "../db/drizzle.ts";
 
 export class SalaRepository {
     static async dadosIniciaisJogador(db: DatabaseType, usuarioId: string) {

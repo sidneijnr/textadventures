@@ -1,8 +1,8 @@
-import { pgTable, uuid, varchar, jsonb, check, AnyPgColumn, numeric, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, jsonb, check, type AnyPgColumn, numeric, timestamp } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tableEntidades } from './entidadeSchema.js';
 import { tableSalas } from './salaSchema.js';
-import { Estado, EstadoItem } from './estadoSchema.ts';
+import { type Estado, type EstadoItem } from './estadoSchema.ts';
 
 export const tableItens = pgTable('itens', {
     id: uuid('id').primaryKey().defaultRandom(),

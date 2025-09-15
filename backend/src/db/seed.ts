@@ -1,10 +1,10 @@
 import "dotenv/config";
 import { randomUUID } from "crypto";
 import { db } from "./drizzle.ts";
-import { Sala, tableSalas } from "./salaSchema.ts";
+import { type Sala, tableSalas } from "./salaSchema.ts";
 import { tableUsers } from "./userSchema.ts";
 import { tableEntidades } from "./entidadeSchema.ts";
-import { Item, tableItens } from "./itemSchema.ts";
+import { type Item, tableItens } from "./itemSchema.ts";
 import { salas } from "../jogo/salas/salas.ts";
 
 // Assume que acabou de dar drizzle kit push, então as tabelas estão criadas mas vazias

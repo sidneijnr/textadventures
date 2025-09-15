@@ -1,7 +1,7 @@
 import { pgTable, uuid, varchar, jsonb, timestamp, pgEnum } from 'drizzle-orm/pg-core';
 import { tableSalas } from './salaSchema.js';
 import { tableUsers } from './userSchema.js';
-import { Estado, EstadoItem } from './estadoSchema.ts';
+import { type Estado, type EstadoItem } from './estadoSchema.ts';
 
 export const enumCategoriaEntidade = pgEnum('categoria_entidade', ['JOGADOR', 'NPC', 'OBJETO', 'CRIATURA']);
 

@@ -1,4 +1,4 @@
-import { ItemType } from "../contexto.ts";
+import { type ItemType } from "../contexto.ts";
 import { itensInicio } from "./inicio.ts";
 
 export const itens: Record<string, ItemType> = {

@@ -1,13 +1,14 @@
 {
-  "name": "backend",
+  "name": "@textadventures/backend",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/server.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "vitest run",
     "dev": "tsx watch ./server.ts",
+    "seed": "npm run db:clear && npm run db:push && npm run db:seed",
     "db:push": "NODE_OPTIONS='--import tsx' drizzle-kit push",
     "db:clear": "tsx ./src/db/clear.ts",
     "db:seed": "tsx ./src/db/seed.ts"

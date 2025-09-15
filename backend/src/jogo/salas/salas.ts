@@ -1,5 +1,5 @@
-import { Estado } from "../../db/estadoSchema.ts";
-import { Contexto, SalaType } from "../contexto.ts";
+import { type Estado } from "../../db/estadoSchema.ts";
+import { Contexto, type SalaType } from "../contexto.ts";
 import { salasInicio } from "./inicio.ts";
 
 export const salas: Record<string, SalaType> = {

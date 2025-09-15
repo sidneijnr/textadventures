@@ -1,4 +1,4 @@
-import { SalaType } from "../contexto.ts";
+import { type SalaType } from "../contexto.ts";
 
 export const salasInicio = {
     Inicio: {

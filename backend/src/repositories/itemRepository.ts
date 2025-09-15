@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { Item, tableItens } from "../db/itemSchema.ts";
-import { DatabaseType } from "../db/drizzle.ts";
+import { type Item, tableItens } from "../db/itemSchema.ts";
+import { type DatabaseType } from "../db/drizzle.ts";
 
 export class ItemRepository {
     static async naMochila(db: DatabaseType, entidadeId: string): Promise<Item[]> {

@@ -1,4 +1,4 @@
-import { RequestHandler } from "express";
+import { type RequestHandler } from "express";
 import { SalaRepository } from "../repositories/salaRepository.ts";
 import { db } from "../db/drizzle.ts";
 import { Contexto } from "../jogo/contexto.ts";
@@ -12,12 +12,12 @@ export class SalaController {
 
         const ctx = await Contexto.carregar(usuario.id);
 
-        await ctx.descreverSala();
+        const result = await ctx.descricaoSala();
         await ctx.salvar();
 
-        res.json({ 
-            resposta: ctx.obterTexto(),
-            // itensNoChao: await ctx.getItensNoChao()
+        res.json({
+            sala: result,
+            ...ctx.retornarSituacao()
         });
     }
 
@@ -39,6 +39,6 @@ export class SalaController {
         }
 
         await ctx.salvar();
-        res.json({ resposta: ctx.obterTexto() });
+        res.json({ ...ctx.retornarSituacao() });
     }
 }

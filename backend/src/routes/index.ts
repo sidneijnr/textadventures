@@ -1,4 +1,4 @@
-import { RequestHandler, Express, ErrorRequestHandler } from "express";
+import { type RequestHandler, type Express, type ErrorRequestHandler } from "express";
 import { getDocsRouter } from "./docsRoute.ts";
 import { logMiddleware } from "./logMiddleware.ts";
 import { getItemRouter } from "./itemRoute.ts";

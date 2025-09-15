@@ -1,12 +1,13 @@
 // Contexto do jogo a ser usado nas funções das salas e comandos
 import { db } from "../db/drizzle.ts";
-import { Entidade } from "../db/entidadeSchema.ts";
-import { Estado } from "../db/estadoSchema.ts";
-import { Item } from "../db/itemSchema.ts";
-import { Sala } from "../db/salaSchema.ts";
+import { type Entidade } from "../db/entidadeSchema.ts";
+import { type Estado } from "../db/estadoSchema.ts";
+import { type Item } from "../db/itemSchema.ts";
+import { type Sala } from "../db/salaSchema.ts";
 import { EntidadeRepository } from "../repositories/entidadeRepository.ts";
 import { ItemRepository } from "../repositories/itemRepository.ts";
 import { SalaRepository } from "../repositories/salaRepository.ts";
+import { getItemConfig } from "./itens/itens.ts";
 import { getSalaConfig } from "./salas/salas.ts";
 
 export type ItemType = {
@@ -83,6 +84,17 @@ export class Contexto {
         const result = await SalaRepository.dadosIniciaisJogador(db, usuarioId);
         return new Contexto(result);
     }
+
+    retornarSituacao() {
+        return {
+            resposta: this.obterTexto(),
+            jogador: {
+                id: this.jogador.id,
+                salaId: this.jogador.salaId,
+            }
+        };
+    }
+
     // =========================================================================
     //                 Funções que alteram o estado do jogo  
     // =========================================================================
@@ -127,20 +139,37 @@ export class Contexto {
     // =========================================================================
     //                 Funções para escrever na resposta  
     // =========================================================================
-    async descreverSala() {
+    async descricaoSala() {
         let salaConfig = getSalaConfig(this.jogador.salaId);
 
         const descr = await salaConfig.descricao(this);
         if(descr) {
             this.escrevaln(descr);
         }
+        const descricaoSala = this.obterTexto();
+
+        const descricaoItens = [];
         for(let item of await this.getItensNoChao()) {
-            // A FAZER: sistema melhor de descrição de itens
-            this.escrevaln(`Você vê aqui ${item.quantidade === 1 ? "um(a)" : item.quantidade} ${item.tipo}.`);
+            const itemConfig = getItemConfig(item.tipo);
+            const descr = await itemConfig.descricao(this);
+            if(descr) {
+                this.escrevaln(descr);
+            }
+            descricaoItens.push({
+                id: item.id,
+                tipo: item.tipo,
+                quantidade: item.quantidade,
+                descricao: this.obterTexto(),
+            });
         }
-        for(const conexao of Object.keys(salaConfig.conexoes)) {
-            this.escrevaln(`- ${conexao}`);
-        }
+        const conexoes = Object.keys(salaConfig.conexoes);
+        
+        return {
+            id: this.jogador.salaId,
+            descricao: descricaoSala, 
+            itens: descricaoItens, 
+            conexoes
+        };
     }
 
     escrevaln(...str: unknown[]) {
@@ -171,6 +200,8 @@ export class Contexto {
     }
 
     obterTexto() {
-        return this.str;
+        let txt = this.str;
+        this.str = "";
+        return txt;
     }
 }

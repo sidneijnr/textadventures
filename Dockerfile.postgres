@@ -1,0 +1,6 @@
+FROM postgres
+
+# Create a .sql to initialize the database in postgresql
+COPY <<-EOF /docker-entrypoint-initdb.d/seed.sql
+    CREATE DATABASE "text_adventures";
+EOF
