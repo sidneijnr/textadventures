@@ -6,12 +6,14 @@ async function descreverSala() {
 
     termPrint(resposta);
     termPrint(sala.descricao.trim());
-    if(sala.itens.length > 0) {
+    if(sala.itens && sala.itens.length > 0) {
         termPrint("Você vê aqui:");
         for(let item of sala.itens) {
             termPrint(`${item.quantidade} ${item.descricao.trim()}`);
         }
     }
+
+    if(sala.conexoes && sala.conexoes.length > 0)
     for(let conexao of sala.conexoes) {
         termPrint(`- ${conexao}`);
     }
@@ -43,7 +45,7 @@ export const principal = async () => {
                 jogador = _jogador;
                 sala = _sala;
             } else if(acao === "PEGAR") {
-                const itemId = sala.itens.find(i => i.tipo.toUpperCase() === args[0])?.id;
+                const itemId = sala.itens?.find(i => i.tipo.toUpperCase() === args[0])?.id;
                 if(!itemId) {
                     termPrint("Não tem isso aqui.");
                     continue;

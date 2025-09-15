@@ -108,8 +108,8 @@ export type RespostaItens = {
 export type RespostaSala = {
     id: string;
     descricao: string;
-    itens: RespostaItens[];
-    conexoes: string[];
+    itens?: RespostaItens[] | null;
+    conexoes?: string[] | null;
 }
 
 export const fetchClient = {
