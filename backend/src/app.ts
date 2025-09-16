@@ -8,7 +8,7 @@ import cookieSession from "cookie-session";
 const app = express();
 // If app is served through a proxy, trust the proxy to allow HTTPS protocol to be detected
 // https://expressjs.com/en/guide/behind-proxies.html
-app.set('trust proxy', true);
+app.set('trust proxy', () => true);
 
 app.use((req, res, next) => {
     try {
@@ -16,6 +16,9 @@ app.use((req, res, next) => {
         res.locals.logData = {
             tempoInicio: performance.now()
         };
+
+        // Força o protocolo https, pois atrás do proxy ele não reconhece por alguma razão
+        req.headers["x-forwarded-proto"] = "https";
     } catch(e) {
         console.error("Erro ao iniciar o log", e);
     }
@@ -57,10 +60,11 @@ app.use(cookieSession({
 
   // Cookie Options
   maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  secure: process.env.NODE_ENV === 'production' ? true : false, // set to true in production
+  secure: true, //process.env.NODE_ENV === 'production' ? true : false, // set to true in production
 
   httpOnly: true,
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : "lax",
+  sameSite: "none", //process.env.NODE_ENV === 'production' ? 'none' : "lax",
+  domain: process.env.COOKIE_DOMAIN || undefined,
   // partitioned: true,
 }));
 
