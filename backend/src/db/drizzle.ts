@@ -18,9 +18,9 @@ export const db = drizzle({
     // logger: process.env.DEBUGLOG === "true" ? true : false,
 });
 
-await db.execute(sql`SET TIME ZONE 'UTC';`).then(() => {
-    console.log("Database connected and timezone set to UTC");
-});
+// await db.execute(sql`SET TIME ZONE 'UTC';`).then(() => {
+//     console.log("Database connected and timezone set to UTC");
+// });
 
 export type DatabaseType = typeof db;
 export type TransactionType<T extends PgDatabase<any,any,any>> = T extends PgDatabase<infer U,infer K,infer P> ? PgTransaction<U,K,P> : never;

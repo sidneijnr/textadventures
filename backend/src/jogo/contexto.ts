@@ -7,25 +7,25 @@ import { type Sala } from "../db/salaSchema.ts";
 import { EntidadeRepository } from "../repositories/entidadeRepository.ts";
 import { ItemRepository } from "../repositories/itemRepository.ts";
 import { SalaRepository } from "../repositories/salaRepository.ts";
-import { getItemConfig } from "./itens/itens.ts";
-import { getSalaConfig } from "./salas/salas.ts";
+import { getItemConfig, type ItemTipo } from "./itens/itens.ts";
+import { getSalaConfig, type SalaNome } from "./salas/salas.ts";
 
-export type ItemType = {
+export type ItemType<ITEM = string> = {
     descricao: (ctx: Contexto) => void | string | Promise<string | void>;
     itensIniciais?: {
-        tipo: string;
+        tipo: ITEM;
         quantidade: number;
         estadoInicial?: Estado;
     }[];
 };
 
-export type SalaType = {
+export type SalaType<SALA = string, ITEM = string> = {
     descricao: (ctx: Contexto) => void | string | Promise<string | void>;
     conexoes: { 
-        [direcao: string]: (ctx: Contexto) => void | string | Promise<string | void>;
+        [direcao: string]: (ctx: Contexto) => void | SALA | Promise<SALA | void>;
     };
-    itensIniciais?: {
-        tipo: string;
+    itensIniciais?: readonly {
+        tipo: ITEM;
         quantidade: number;
         estadoInicial?: Estado;
     }[];
@@ -148,7 +148,7 @@ export class Contexto {
     // =========================================================================
     //                 Funções que alteram o estado do jogo  
     // =========================================================================
-    async moverParaSala(novaSalaNome: string) {
+    async moverParaSala(novaSalaNome: SalaNome) {
         if(this._salvarJogador || (this.sala && this._salvarSala)) {
             throw new Error("Deve salvar antes!");
         }
@@ -179,7 +179,7 @@ export class Contexto {
         this.itensNoChao = null;
     }
 
-    async criarItem(item: { tipo: string, estado?: Estado, quantidade: number}, onde: { entidadeId?: string } | { salaId?: string } | { itemContainerId?: string }) {
+    async criarItem(item: { tipo: ItemTipo, estado?: Estado, quantidade: number}, onde: { entidadeId?: string } | { salaId?: string } | { itemContainerId?: string }) {
         const { localTipo, localId } = ondeParaLocalId(onde);
         await ItemRepository.adicionarItem(db, {
             tipo: item.tipo,
@@ -226,7 +226,7 @@ export class Contexto {
     static async _descricaoItens(ctx: Contexto, itens: Item[]) {
         const descricaoItens = [];
         for(let item of itens) {
-            const itemConfig = getItemConfig(item.tipo);
+            const itemConfig = getItemConfig(item.tipo as ItemTipo);
             const descr = await itemConfig.descricao(ctx);
             if(descr) {
                 ctx.escrevaln(descr);
@@ -244,7 +244,7 @@ export class Contexto {
 
     async descricaoSala() {
         const sala = await this.getSala();
-        let salaConfig = getSalaConfig(sala.nome);
+        let salaConfig = getSalaConfig(sala.nome as SalaNome);
 
         const descr = await salaConfig.descricao(this);
         if(descr) {

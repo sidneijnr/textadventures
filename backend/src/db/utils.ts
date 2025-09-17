@@ -27,3 +27,21 @@ export const mapArrayWithTable = <T extends PgTableWithColumns<any>>(table: T) =
         }
     }
 }
+
+// https://stackoverflow.com/questions/53503813/get-dictionary-object-keys-as-tuple-in-typescript
+export type UnionToIntersection<U> = (
+  U extends never ? never : (arg: U) => never
+) extends (arg: infer I) => void
+  ? I
+  : never;
+
+export type UnionToTuple<T> = UnionToIntersection<
+  T extends never ? never : (t: T) => T
+> extends (_: never) => infer W
+  ? [...UnionToTuple<Exclude<T, W>>, W]
+  : [];
+
+export const getTupleFromKeys = <T extends string>(obj: Record<T, unknown>): UnionToTuple<T> => {
+    const keys = Object.keys(obj) as T[];
+    return keys as UnionToTuple<T>;
+}

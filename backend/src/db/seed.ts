@@ -5,9 +5,10 @@ import { type Sala, tableSalas } from "./salaSchema.ts";
 import { tableUsers } from "./userSchema.ts";
 import { tableEntidades } from "./entidadeSchema.ts";
 import { type Item, tableItens } from "./itemSchema.ts";
-import { salas } from "../jogo/salas/salas.ts";
+import { salas, type SalaNome } from "../jogo/salas/salas.ts";
 import bcrypt from "bcryptjs";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { ProcedureResetarItensChao } from "./procedures/resetarItensChao.ts";
 
 // Assume que acabou de dar drizzle kit push, então as tabelas estão criadas mas vazias
 // OU, se já tiver dados, não insere duplicados
@@ -15,11 +16,11 @@ try {
 
     const insertSalas: typeof tableSalas.$inferInsert[] = [];
     const insertItens: typeof tableItens.$inferInsert[] = [];
-    for(let [salaId, sala] of Object.entries(salas)) {
+    for(let [salaNome, sala] of Object.entries(salas)) {
         const salaUUID = randomUUID();
         insertSalas.push({
             id: salaUUID,
-            nome: salaId,
+            nome: salaNome as SalaNome,
             estado: sala.estadoInicial || {}
         });
     }
@@ -60,6 +61,15 @@ try {
     await db.insert(tableItens).values(insertItens);
     
     console.log("Seed inicial criado!");
+
+    /*// https://supabase.com/blog/postgres-as-a-cron-server
+    try {
+        await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pg_cron`);
+
+        await ProcedureResetarItensChao.create(db);
+    } catch (error) {
+        console.error("Erro ao criar extensão pg_cron ou procedure:", error);
+    }*/
 
 } catch (error) {
     console.error("Erro:", error);

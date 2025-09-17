@@ -3,16 +3,20 @@ import { sql } from 'drizzle-orm';
 import { tableEntidades } from './entidadeSchema.js';
 import { tableSalas } from './salaSchema.js';
 import { type Estado, type EstadoItem } from './estadoSchema.ts';
+import { itens, type ItemTipo } from '../jogo/itens/itens.ts';
+import { getTupleFromKeys } from './utils.ts';
 
 export const enumLocalTipo = pgEnum('local_tipo', [
     "ENTIDADE", "SALA", "CONTAINER"
 ]);
 
+export const enumItemTipo = pgEnum('item_tipo', getTupleFromKeys(itens));
+
 export const tableItens = pgTable('itens', {
     id: uuid('id').primaryKey().defaultRandom(),
 
     // Que tipo de item é esse (ex: "espada", "pocao", "chave")
-    tipo: varchar('tipo', { length: 100 }).notNull(),
+    tipo: enumItemTipo('tipo').notNull(),
 
     // Quantidade desse item (para itens empilháveis) Sempre >= 1
     quantidade: integer('quantidade').default(1).notNull(),

@@ -1,8 +1,8 @@
 # TextAdventures
 Aventuras de Texto, desenvolvidos por alunos do curso ADS
 
-Online no Github Pages: https://erickweil.github.io/textadventures/
-API hospedada na Vercel: https://textadventures.vercel.app/
+- Front no Github Pages: https://erickweil.github.io/textadventures/
+- API hospedada na Vercel: https://textadventures.vercel.app/
 
 ## Como jogar
 

@@ -1,4 +1,4 @@
-import { type SalaType } from "../contexto.ts";
+import { Contexto, type SalaType } from "../contexto.ts";
 
 export const salasInicio = {
     Inicio: {
@@ -6,8 +6,8 @@ export const salasInicio = {
         Ao leste há uma abertura na parede, e para cima tem uma escada com um alçapão que leva para fora
         `,
         conexoes: {
-            "L": () => "Caverna",
-            "SUBIR": async (ctx) => {
+            "L": () => "Caverna" as const,
+            "SUBIR": async (ctx: Contexto) => {
                 let objetos = await ctx.getMochila();
                 const [ moedas ] = objetos.filter((o) => o.tipo === "Moedas");
                 if(moedas && moedas.quantidade > 0) {
@@ -31,20 +31,20 @@ export const salasInicio = {
         Ao sul há uma escada descendo na escuridão
         `,
         conexoes: {
-            "O": () => "Inicio",
-            "S": () => "Poço",
-            "L": async (ctx) => {
+            "O": () => "Inicio" as const,
+            "S": () => "Poço" as const,
+            "L": async (ctx: Contexto) => {
                 let objetos = await ctx.getMochila();
                 const [ pedras ] = objetos.filter((o) => o.tipo === "Pedra");
                 if(pedras && pedras.quantidade > 1) {
                     ctx.escrevaln("A ponte balança e você cai no Poço abaixo");
-                    return "Poço";
+                    await ctx.moverParaSala("Poço");
                 } else {
                     if(Math.random() > 0.5) {
                         ctx.escrevaln("A ponte balança e você cai no Poço abaixo");
-                        return "Poço";
+                        await ctx.moverParaSala("Poço");
                     } else {
-                        return "Tesouro";
+                        await ctx.moverParaSala("Tesouro");
                     }
                 }
             },
@@ -53,7 +53,7 @@ export const salasInicio = {
     Poço: {
         descricao: () => "Este é um poço no fundo da caverna, acima há uma escada de cordas",
         conexoes: {
-            "N": () => "Caverna"
+            "N": () => "Caverna" as const
         },
         itensIniciais: [{
             tipo: "Pedra",
@@ -61,7 +61,7 @@ export const salasInicio = {
         }]
     },
     Tesouro: {
-        descricao: async (ctx) => {
+        descricao: async (ctx: Contexto) => {
             const estado = (await ctx.getSala()).estado;
             if(estado.bauAberto) {
                 ctx.escrevaln("Você está em uma sala de pedra decorada com um baú aberto no centro, sem nada dentro");
@@ -70,8 +70,8 @@ export const salasInicio = {
             }
         },
         conexoes: {
-            "O": () => "Caverna",
-            "ABRIR": async (ctx) => {
+            "O": () => "Caverna" as const,
+            "ABRIR": async (ctx: Contexto) => {
                 const estado = (await ctx.getSala()).estado;
                 if(estado.bauAberto) {
                     ctx.escrevaln("O baú já está aberto, sem nada dentro");
@@ -99,7 +99,7 @@ export const salasInicio = {
                     ctx.escrevaln("O baú está muito alto, você não consegue alcançá-lo, se tivesse algo para subir...");
                 }
             },
-            "FECHAR": async (ctx) => {
+            "FECHAR": async (ctx: Contexto) => {
                 const estado = (await ctx.getSala()).estado;
                 if(!estado.bauAberto) {
                     ctx.escrevaln("O baú já está fechado");
@@ -121,4 +121,4 @@ export const salasInicio = {
             bauAberto: false
         }
     },
-} satisfies Record<string, SalaType>;
+} as const;

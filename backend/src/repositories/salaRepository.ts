@@ -7,6 +7,7 @@ import { type Item, tableItens } from "../db/itemSchema.ts";
 import { type DatabaseType } from "../db/drizzle.ts";
 import { RevokeSessionError } from "../middlewares/authMiddleware.ts";
 import { mapArrayWithTable } from "../db/utils.ts";
+import type { SalaNome } from "../jogo/salas/salas.ts";
 
 export class SalaRepository {
     static async dadosIniciaisJogador(db: DatabaseType, username: string) {
@@ -82,7 +83,7 @@ export class SalaRepository {
         return result && result.length > 0 ? result[0] : null;
     }
 
-    static async getSalaByNome(db: DatabaseType, sala: string): Promise<Sala | null> {
+    static async getSalaByNome(db: DatabaseType, sala: SalaNome): Promise<Sala | null> {
         const result = await db.select()
         .from(tableSalas)
         .where(eq(tableSalas.nome, sala))

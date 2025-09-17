@@ -2,6 +2,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import { type Item, tableItens } from "../db/itemSchema.ts";
 import { type DatabaseType } from "../db/drizzle.ts";
 import type { Estado } from "../db/estadoSchema.ts";
+import type { ItemTipo } from "../jogo/itens/itens.ts";
 
 export class ItemRepository {
     static async naMochila(db: DatabaseType, entidadeId: string): Promise<Item[]> {
@@ -57,7 +58,7 @@ export class ItemRepository {
     }
 
     static async adicionarItem(db: DatabaseType, itemAtual: {
-        tipo: string,
+        tipo: ItemTipo,
         estado?: Estado,
         criadoEm?: Date,
         quantidade: number,

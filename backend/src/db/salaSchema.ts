@@ -1,10 +1,14 @@
-import { pgTable, varchar, jsonb, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, jsonb, timestamp, uuid, pgEnum } from 'drizzle-orm/pg-core';
 import { type Estado, type EstadoItem } from './estadoSchema.ts';
+import { salas } from '../jogo/salas/salas.ts';
+import { getTupleFromKeys } from './utils.ts';
+
+export const enumSalaNome = pgEnum('sala_nome', getTupleFromKeys(salas));
 
 export const tableSalas = pgTable('salas', {
     id: uuid('id').primaryKey().defaultRandom(),
     // ID da sala que corresponde ao seu código (ex: "sala_do_trono")
-    nome: varchar('nome', { length: 100 }).unique().notNull(),
+    nome: enumSalaNome('nome').unique().notNull(),
     
     atualizadoEm: timestamp('atualizado_em', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
 
