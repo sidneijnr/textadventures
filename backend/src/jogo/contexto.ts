@@ -32,15 +32,6 @@ export type SalaType<SALA = string, ITEM = string> = {
     estadoInicial?: Estado;
 };
 
-function ondeParaLocalId(onde: { entidadeId?: string } | { salaId?: string } | { itemContainerId?: string }) {
-    const localTipo = "entidadeId" in onde && onde.entidadeId ? "ENTIDADE" : "salaId" in onde && onde.salaId ? "SALA" : "itemContainerId" in onde && onde.itemContainerId ? "CONTAINER" : undefined;
-    const localId = ("entidadeId" in onde && onde.entidadeId) || ("salaId" in onde && onde.salaId) || ("itemContainerId" in onde && onde.itemContainerId);
-    if(!localTipo || !localId) {
-        throw new Error("Quer colocar onde? lugar nenhum?");
-    }
-    return { localTipo, localId } as const;
-}
-
 // Serve como service que interage com o banco de dados, e guarda o estado atual do jogo
 export class Contexto {
     jogador: Entidade;
@@ -50,7 +41,7 @@ export class Contexto {
     async getMochila() {
         if(this.mochila) return this.mochila;
 
-        this.mochila = await ItemRepository.naMochila(db, this.jogador.id);
+        this.mochila = await ItemRepository.listarPorLocal(db, this.jogador.localId);
         return this.mochila;
     }
 
@@ -59,7 +50,7 @@ export class Contexto {
         if(this.itensNoChao) return this.itensNoChao;
 
         const sala = await this.getSala();
-        this.itensNoChao = await ItemRepository.noChao(db, sala.id);
+        this.itensNoChao = await ItemRepository.listarPorLocal(db, sala.localId);
         return this.itensNoChao;
     }
 
@@ -114,8 +105,10 @@ export class Contexto {
         return {
             resposta: this.obterTexto(),
             jogador: {
+                id: this.jogador.id,
+                localId: this.jogador.localId,
                 username: this.jogador.username,
-                salaId: this.jogador.salaId,
+                salaId: this.jogador.salaId,                
                 atualizadoEm: this.jogador.atualizadoEm,
                 mochila: this.mochila ? this.mochila.map(i => ({
                     id: i.id,
@@ -126,6 +119,7 @@ export class Contexto {
             },
             sala: this.sala ? {
                 id: this.sala.id,
+                localId: this.sala.localId,
                 nome: this.sala.nome,
                 atualizadoEm: this.sala.atualizadoEm,
                 itens: this.itensNoChao ? this.itensNoChao.map(i => ({
@@ -136,6 +130,7 @@ export class Contexto {
                 })) : undefined,
                 entidades: this.entidadesNaSala ? this.entidadesNaSala.map(e => ({
                     id: e.id,
+                    localId: e.localId,
                     categoria: e.categoria,
                     tipo: e.tipo,
                     username: e.username,
@@ -165,28 +160,25 @@ export class Contexto {
         this._salvarSala = false;
     }
 
-    async moverItem(item: Item, quantidade: number, onde: { entidadeId?: string } | { salaId?: string } | { itemContainerId?: string } | null) {
-        if(onde === null) {
+    async moverItem(item: Item, quantidade: number, onde: { localId?: string } | null) {
+        if(!onde || !onde.localId) {
             // Descarta o item
             await ItemRepository.removerItem(db, item.id, quantidade);
         } else {
             // Move o item para outro lugar
-            const { localTipo, localId } = ondeParaLocalId(onde);
-            await ItemRepository.moverItem(db, item.id, quantidade, localTipo, localId);
+            await ItemRepository.moverItem(db, item.id, quantidade, onde.localId);
         }
 
         this.mochila = null;
         this.itensNoChao = null;
     }
 
-    async criarItem(item: { tipo: ItemTipo, estado?: Estado, quantidade: number}, onde: { entidadeId?: string } | { salaId?: string } | { itemContainerId?: string }) {
-        const { localTipo, localId } = ondeParaLocalId(onde);
+    async criarItem(item: { tipo: ItemTipo, estado?: Estado, quantidade: number}, onde: { localId: string }) {
         await ItemRepository.adicionarItem(db, {
             tipo: item.tipo,
             quantidade: item.quantidade,
             estado: item.estado || {},
-            localTipo: localTipo,
-            localId: localId
+            ondeId: onde.localId
         });
 
         this.mochila = null;
@@ -260,6 +252,7 @@ export class Contexto {
         for(let entidade of entidades) {
             descricaoEntidades.push({
                 id: entidade.id,
+                localId: entidade.localId,
                 categoria: entidade.categoria,
                 tipo: entidade.tipo,
                 username: entidade.username,
@@ -270,6 +263,7 @@ export class Contexto {
         
         return {
             id: sala.id,
+            localId: sala.localId,
             nome: sala.nome,
             descricao: descricaoSala, 
             itens: descricaoItens,

@@ -19,7 +19,7 @@ export class ItemController {
             if (!objeto) {
                 ctx.escrevaln("Não tem isso aqui.");
             } else {
-                await ctx.moverItem(objeto, body.quantidade, { entidadeId: ctx.jogador.id });
+                await ctx.moverItem(objeto, body.quantidade, ctx.jogador);
             }
         }
 
@@ -43,7 +43,7 @@ export class ItemController {
             if (!objeto) {
                 ctx.escrevaln("Não tem isso na mochila.");
             } else {
-                await ctx.moverItem(objeto, body.quantidade, { salaId: ctx.jogador.salaId });
+                await ctx.moverItem(objeto, body.quantidade, await ctx.getSala());
             }
         }
 

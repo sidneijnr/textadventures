@@ -7,7 +7,7 @@ import { tableEntidades } from "./entidadeSchema.ts";
 import { type Item, tableItens } from "./itemSchema.ts";
 import { salas, type SalaNome } from "../jogo/salas/salas.ts";
 import bcrypt from "bcryptjs";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { ProcedureResetarItensChao } from "./procedures/resetarItensChao.ts";
 
 // Assume que acabou de dar drizzle kit push, então as tabelas estão criadas mas vazias
@@ -34,7 +34,7 @@ try {
                 estado: sql`EXCLUDED.estado`,
                 atualizadoEm: sql`NOW()`,
             }
-        }).returning({ id: tableSalas.id, nome: tableSalas.nome });
+        }).returning({ id: tableSalas.id, nome: tableSalas.nome, localId: tableSalas.localId });
 
     for(let sala of todasAsSalas) {
         const configSala = salas[sala.nome as keyof typeof salas];
@@ -47,8 +47,7 @@ try {
                     tipo: item.tipo,
                     quantidade: item.quantidade,
                     quantidadeInicial: item.quantidade,
-                    localTipo: "SALA",
-                    localId: sala.id,
+                    ondeId: sala.localId,
                     estado: item.estadoInicial || {}
                 });
             }
@@ -56,21 +55,21 @@ try {
     }
 
     // Deleta todos os itens que estão no chão das salas
-    await db.delete(tableItens).where(eq(tableItens.localTipo, "SALA"));
+    //await db.delete(tableItens).where(eq(tableItens.localTipo, "SALA"));
+    // DELETE com join pegando os locais das salas
+    const itensNoChao = db.select({ id: tableItens.id })
+        .from(tableItens)
+        .innerJoin(tableSalas, eq(tableItens.ondeId, tableSalas.localId))
+        .where(isNotNull(tableSalas.localId));
+
+    await db.delete(tableItens).where(
+        inArray(tableItens.id, itensNoChao)
+    );
+
     // Re-insere os itens iniciais no chão das salas
     await db.insert(tableItens).values(insertItens);
     
     console.log("Seed inicial criado!");
-
-    /*// https://supabase.com/blog/postgres-as-a-cron-server
-    try {
-        await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pg_cron`);
-
-        await ProcedureResetarItensChao.create(db);
-    } catch (error) {
-        console.error("Erro ao criar extensão pg_cron ou procedure:", error);
-    }*/
-
 } catch (error) {
     console.error("Erro:", error);
 } finally {

@@ -1,6 +1,8 @@
 import { getTableColumns } from "drizzle-orm";
 import type { PgTableWithColumns } from "drizzle-orm/pg-core"
 
+export const UUID_ZERO = '00000000-0000-0000-0000-000000000000';
+
 export const mapArrayWithTable = <T extends PgTableWithColumns<any>>(table: T) => {
     const tableColumns = getTableColumns(table);
     return {

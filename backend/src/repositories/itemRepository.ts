@@ -5,29 +5,17 @@ import type { Estado } from "../db/estadoSchema.ts";
 import type { ItemTipo } from "../jogo/itens/itens.ts";
 
 export class ItemRepository {
-    static async naMochila(db: DatabaseType, entidadeId: string): Promise<Item[]> {
+    static async listarPorLocal(db: DatabaseType, localId: string): Promise<Item[]> {
         const itens = await db.select()
             .from(tableItens)
             .where(and(
-                eq(tableItens.localTipo, "ENTIDADE"), 
-                eq(tableItens.localId, entidadeId),
+                eq(tableItens.ondeId, localId),
                 gte(tableItens.quantidade, 1)
             ));
         return itens;
     }
 
-    static async noChao(db: DatabaseType, salaId: string): Promise<Item[]> {
-        const itens = await db.select()
-            .from(tableItens)
-            .where(and(
-                eq(tableItens.localTipo, "SALA"), 
-                eq(tableItens.localId, salaId),
-                gte(tableItens.quantidade, 1)
-            ));
-        return itens;
-    }
-
-    static async moverItem(db: DatabaseType, itemId: string, quantidade: number, localTipo: "ENTIDADE" | "SALA" | "CONTAINER", localId: string) {
+    static async moverItem(db: DatabaseType, itemId: string, quantidade: number, localId: string) {
         return await db.transaction(async (tx: any) => {
             // 1. Retira o item de onde ele está agora (Não tem problema deixar 0 itens)
             const itemAtual = await this.removerItem(tx, itemId, quantidade);
@@ -36,8 +24,7 @@ export class ItemRepository {
             return await this.adicionarItem(tx, {
                 tipo: itemAtual.tipo,
                 quantidade: quantidade,
-                localTipo: localTipo,
-                localId: localId,
+                ondeId: localId,
                 estado: itemAtual.estado,
                 criadoEm: itemAtual.criadoEm
             });
@@ -62,19 +49,17 @@ export class ItemRepository {
         estado?: Estado,
         criadoEm?: Date,
         quantidade: number,
-        localTipo: "ENTIDADE" | "SALA" | "CONTAINER", 
-        localId: string
+        ondeId: string
     }) {
         const [result] = await db.insert(tableItens).values({
             tipo: itemAtual.tipo,
             quantidade: itemAtual.quantidade,
-            localTipo: itemAtual.localTipo,
-            localId: itemAtual.localId,
+            ondeId: itemAtual.ondeId,
             estado: itemAtual.estado,
             criadoEm: sql<Date>`NOW()`,
             atualizadoEm: sql<Date>`NOW()`,
         }).onConflictDoUpdate({
-            target: [tableItens.tipo, tableItens.localTipo, tableItens.localId],
+            target: [tableItens.tipo, tableItens.ondeId],
             set: {
                 quantidade: sql<number>`(${tableItens.quantidade} + ${itemAtual.quantidade})`,
                 atualizadoEm: sql<Date>`NOW()`

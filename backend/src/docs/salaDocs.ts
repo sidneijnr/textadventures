@@ -11,6 +11,7 @@ export const salaDocs = {
                 response: respostaSituacao.extend({
                     sala: z.object({
                         id: z.string().meta({ example: "Inicio" }),
+                        localId: z.uuid().meta({ example: "UUID" }),
                         descricao: z.string().meta({
                             example: "Você está em uma sala iluminada. Há uma porta ao norte e uma janela ao sul.",
                         }),
@@ -27,6 +28,7 @@ export const salaDocs = {
                         })),
                         entidades: z.array(z.object({
                             id: z.uuid().meta({ example: "UUID" }),
+                            localId: z.uuid().meta({ example: "UUID" }),
                             categoria: z.string().meta({ example: "JOGADOR" }),
                             tipo: z.string().meta({ example: "JOGADOR" }),
                             username: z.string().meta({ example: "usuario123" }),

@@ -88,7 +88,7 @@ export const salasInicio = {
                             "por volta de 200 AC, com inscrições de Alexandre o Grande"
                         );
                         
-                        await ctx.criarItem({ tipo: "Moedas", quantidade: 100}, { entidadeId: ctx.jogador.id });
+                        await ctx.criarItem({ tipo: "Moedas", quantidade: 100}, ctx.jogador);
                         await ctx.alterarEstadoSala({ bauAberto: true });
                     } else if (pedras.quantidade > 2) {
                         ctx.escrevaln("Parece que tem pedras demais aqui, nem consegue ver o baú direito");

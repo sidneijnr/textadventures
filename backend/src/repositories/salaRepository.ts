@@ -12,21 +12,23 @@ import type { SalaNome } from "../jogo/salas/salas.ts";
 export class SalaRepository {
     static async dadosIniciaisJogador(db: DatabaseType, username: string) {
         const itensSubquery = db.select({
-            salaId: tableItens.localId,
+            salaId: tableSalas.id,
             sala_itens: sql`COALESCE(jsonb_agg(${tableItens}.*), '[]'::jsonb)`.mapWith(mapArrayWithTable(tableItens)).as("sala_itens"),
             })
             .from(tableItens)
-            .where(and(eq(tableItens.localTipo, "SALA"), gte(tableItens.quantidade, 1)))
-            .groupBy(tableItens.localId)
+            .innerJoin(tableSalas, eq(tableItens.ondeId, tableSalas.localId))
+            .where(gte(tableItens.quantidade, 1))
+            .groupBy(tableSalas.id)
             .as("itens_sub");
 
         const mochilaSubquery = db.select({
-            entidadeId: tableItens.localId,
+            entidadeId: tableEntidades.id,
             mochila_itens: sql`COALESCE(jsonb_agg(${tableItens}.*), '[]'::jsonb)`.mapWith(mapArrayWithTable(tableItens)).as("mochila_itens"),
             })
             .from(tableItens)
-            .where(and(eq(tableItens.localTipo, "ENTIDADE"), gte(tableItens.quantidade, 1)))
-            .groupBy(tableItens.localId)
+            .innerJoin(tableEntidades, eq(tableItens.ondeId, tableEntidades.localId))
+            .where(gte(tableItens.quantidade, 1))
+            .groupBy(tableEntidades.id)
             .as("mochila_sub");
 
         const entidadeSubquery = db.select({

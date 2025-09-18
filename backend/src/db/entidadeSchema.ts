@@ -2,6 +2,8 @@ import { pgTable, uuid, varchar, jsonb, timestamp, pgEnum } from 'drizzle-orm/pg
 import { tableSalas } from './salaSchema.js';
 import { tableUsers } from './userSchema.js';
 import { type Estado, type EstadoItem } from './estadoSchema.ts';
+import { tableLocais } from './itemSchema.ts';
+import { UUID_ZERO } from './utils.ts';
 
 export const enumCategoriaEntidade = pgEnum('categoria_entidade', ['JOGADOR', 'NPC', 'OBJETO', 'CRIATURA']);
 
@@ -30,6 +32,9 @@ export const tableEntidades = pgTable('entidades', {
 
     // Se a entidade for um jogador, aqui está o link para sua conta
     username: varchar('username', { length: 50 }).references(() => tableUsers.username, { onDelete: 'restrict' }).unique(),
+
+    // Referência para o local para itens associado a esta entidade, criado pela trigger criar_local_automatico.
+    localId: uuid('local_id').references(() => tableLocais.id, { onDelete: 'restrict' }).$defaultFn(() => UUID_ZERO).unique().notNull(),
 
     criadoEm: timestamp('criado_em', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     atualizadoEm: timestamp('atualizado_em', { mode: 'date', withTimezone: true }).defaultNow().notNull(),

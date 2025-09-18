@@ -6,11 +6,11 @@ import { type Estado, type EstadoItem } from './estadoSchema.ts';
 import { itens, type ItemTipo } from '../jogo/itens/itens.ts';
 import { getTupleFromKeys } from './utils.ts';
 
-export const enumLocalTipo = pgEnum('local_tipo', [
-    "ENTIDADE", "SALA", "CONTAINER"
-]);
-
 export const enumItemTipo = pgEnum('item_tipo', getTupleFromKeys(itens));
+
+export const tableLocais = pgTable('locais', {
+    id: uuid('id').primaryKey().defaultRandom(),
+});
 
 export const tableItens = pgTable('itens', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -23,8 +23,11 @@ export const tableItens = pgTable('itens', {
     // Quando é um item inicial (spawn) de uma sala. valor que será restaurado.
     quantidadeInicial: integer('quantidade_inicial'),
     
-    localTipo: enumLocalTipo('local_tipo').notNull(),
-    localId: uuid('local_id').notNull(),
+    //localTipo: enumLocalTipo('local_tipo').notNull(),
+    //localId: uuid('local_id').notNull(),
+
+    // Onde o item está atualmente
+    ondeId: uuid('onde_id').references(() => tableLocais.id, { onDelete: 'restrict' }).notNull(),
 
     criadoEm: timestamp('criado_em', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     atualizadoEm: timestamp('atualizado_em', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
@@ -34,9 +37,9 @@ export const tableItens = pgTable('itens', {
     estado: jsonb('estado').$type<Estado>().default({}).notNull(),
 },
     (table) => [
-        // Garante que o item esteja em apenas EM UM LUGAR
-        uniqueIndex("idx_unico_local")
-            .on(table.tipo, table.localTipo, table.localId)
+        // Garante que cada tipo de item esteja em apenas EM UM LUGAR
+        uniqueIndex("idx_unico_tipo_onde")
+            .on(table.tipo, table.ondeId)
     ]
 );
 
