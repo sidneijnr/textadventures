@@ -1,5 +1,7 @@
 // Contexto do jogo a ser usado nas funções das salas e comandos
 import { db } from "../db/drizzle.ts";
+import { getItemConfig, getSalaConfig, type ItemTipo, type SalaNome } from "./config.ts";
+
 import { type Entidade } from "../db/entidadeSchema.ts";
 import { type Estado } from "../db/estadoSchema.ts";
 import { type Item } from "../db/itemSchema.ts";
@@ -7,51 +9,6 @@ import { type Sala } from "../db/salaSchema.ts";
 import { EntidadeRepository } from "../repositories/entidadeRepository.ts";
 import { ItemRepository } from "../repositories/itemRepository.ts";
 import { SalaRepository } from "../repositories/salaRepository.ts";
-import { _itens, type ItemTipo } from "./itens/itens.ts";
-import { _salas, type SalaNome } from "./salas/salas.ts";
-
-export type ItemType<ITEM = string> = {
-    descricao: (ctx: Contexto) => void | string | Promise<string | void>;
-    itensIniciais?: {
-        tipo: ITEM;
-        quantidade: number;
-        estadoInicial?: Estado;
-    }[];
-};
-
-export type SalaType<SALA = string, ITEM = string> = {
-    descricao: (ctx: Contexto) => void | string | Promise<string | void>;
-    conexoes: { 
-        [direcao: string]: (ctx: Contexto) => void | SALA | Promise<SALA | void>;
-    };
-    itensIniciais?: readonly {
-        tipo: ITEM;
-        quantidade: number;
-        estadoInicial?: Estado;
-    }[];
-    estadoInicial?: Estado;
-};
-
-export const itens: Record<ItemTipo, ItemType<ItemTipo>> = _itens;
-
-export const getItemConfig = (itemTipo: ItemTipo) => {
-    let itemConfig = itens[itemTipo];
-    if(!itemConfig) {
-        throw new Error(`Item com tipo ${itemTipo} não existe na configuração do jogo!`);
-    }
-
-    return itemConfig;
-}
-
-export const salas: Record<SalaNome, SalaType<SalaNome, ItemTipo>> = _salas;
-
-export const getSalaConfig = (salaId: SalaNome) => {
-    let salaConfig = salas[salaId];
-    if(!salaConfig) {
-        throw new Error(`Sala com id ${salaId} não existe na configuração do jogo!`);
-    }
-    return salaConfig;
-}
 
 // Serve como service que interage com o banco de dados, e guarda o estado atual do jogo
 export class Contexto {
@@ -62,7 +19,7 @@ export class Contexto {
     async getMochila() {
         if(this.mochila) return this.mochila;
 
-        this.mochila = await ItemRepository.listarPorLocal(db, this.jogador.localId);
+        this.mochila = await ItemRepository.listarPorLocal(db, this.jogador.id);
         return this.mochila;
     }
 
@@ -71,7 +28,7 @@ export class Contexto {
         if(this.itensNoChao) return this.itensNoChao;
 
         const sala = await this.getSala();
-        this.itensNoChao = await ItemRepository.listarPorLocal(db, sala.localId);
+        this.itensNoChao = await ItemRepository.listarPorLocal(db, sala.id);
         return this.itensNoChao;
     }
 
@@ -127,14 +84,14 @@ export class Contexto {
     static async _descricaoItens(ctx: Contexto, itens: Item[]) {
         const descricaoItens = [];
         for(let item of itens) {
-            const itemConfig = getItemConfig(item.tipo as ItemTipo);
+            const itemConfig = getItemConfig(item.nome as ItemTipo);
             const descr = await itemConfig.descricao(ctx);
             if(descr) {
                 ctx.escrevaln(descr);
             }
             descricaoItens.push({
                 id: item.id,
-                tipo: item.tipo,
+                nome: item.nome,
                 quantidade: item.quantidade,
                 atualizadoEm: item.atualizadoEm,
                 descricao: ctx.obterTexto(),
@@ -159,7 +116,6 @@ export class Contexto {
         const descricaoMochila = await Contexto._descricaoItens(this, await this.getMochila());
         const descricaoEntidades = (await this.getEntidadesNaSala()).map(e => ({
             id: e.id,
-            localId: e.localId,
             categoria: e.categoria,
             tipo: e.tipo,
             username: e.username,
@@ -171,7 +127,6 @@ export class Contexto {
             resposta: resposta,
             jogador: {
                 id: this.jogador.id,
-                localId: this.jogador.localId,
                 username: this.jogador.username,
                 salaId: this.jogador.salaId,                
                 atualizadoEm: this.jogador.atualizadoEm,
@@ -179,7 +134,6 @@ export class Contexto {
             },
             sala: {
                 id: sala.id,
-                localId: sala.localId,
                 nome: sala.nome,
                 atualizadoEm: sala.atualizadoEm,
                 conexoes: Object.keys(salaConfig.conexoes),
@@ -213,25 +167,31 @@ export class Contexto {
         this.itensNoChao = null;
     }
 
-    async moverItem(item: Item, quantidade: number, onde: { localId?: string } | null) {
-        if(!onde || !onde.localId) {
+    async moverItem(item: Item, { quantidade, ondeId, estado }: { 
+        quantidade: number,
+        ondeId: string | null,
+        estado?: Estado,
+    }) {
+        if(ondeId === null) {
             // Descarta o item
             await ItemRepository.removerItem(db, item.id, quantidade);
         } else {
             // Move o item para outro lugar
-            await ItemRepository.moverItem(db, item.id, quantidade, onde.localId);
+            // A FAZER: lidar com pilhaId quando mudar o estado
+            await ItemRepository.moverItem(db, item.id, { quantidade, ondeId, pilhaId: item.nome, estado });
         }
 
         this.mochila = null;
         this.itensNoChao = null;
     }
 
-    async criarItem(item: { tipo: ItemTipo, estado?: Estado, quantidade: number}, onde: { localId: string }) {
+    async criarItem(item: { nome: ItemTipo, estado?: Estado, quantidade: number, ondeId: string }) {
         await ItemRepository.adicionarItem(db, {
-            tipo: item.tipo,
+            nome: item.nome,
+            pilhaId: item.nome, // A FAZER: lidar com pilhaId ligado ao estado
             quantidade: item.quantidade,
             estado: item.estado || {},
-            ondeId: onde.localId
+            ondeId: item.ondeId,
         });
 
         this.mochila = null;

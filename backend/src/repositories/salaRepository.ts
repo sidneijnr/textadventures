@@ -7,41 +7,52 @@ import { type Item, tableItens, tableLocais } from "../db/itemSchema.ts";
 import { type DatabaseType } from "../db/drizzle.ts";
 import { RevokeSessionError } from "../middlewares/authMiddleware.ts";
 import { mapArrayWithTable } from "../db/utils.ts";
-import type { SalaNome } from "../jogo/salas/salas.ts";
+import type { SalaNome } from "../jogo/config.ts";
 
 export class SalaRepository {
     static async dadosIniciaisJogador(db: DatabaseType, username: string) {
-        const [resultGlobal, result] = await Promise.all([
-            db.select().from(tableSalas).where(eq(tableSalas.nome, "Global")).limit(1),
-            db.query.tableEntidades.findFirst({
-                where: eq(tableEntidades.username, username),
-                with: {
-                    sala: {
-                        with: {
-                            itens: true,
-                            entidades: true
-                        }
-                    },
-                    mochila: true
+        const jogadorResult = await db.select({
+            salaId: tableEntidades.salaId,
+            global: tableSalas
+        })
+        .from(tableEntidades)
+        .leftJoin(tableSalas, eq(tableSalas.nome, "Global"))
+        .where(eq(tableEntidades.username, username))
+        .limit(1);
+
+        if(jogadorResult.length === 0 || !jogadorResult[0].salaId) {
+            throw new RevokeSessionError("Usuário ou entidade não existe!");
+        }
+        const { salaId, global } = jogadorResult[0];
+
+        const result = await db.query.tableSalas.findFirst({
+            where: eq(tableSalas.id, salaId),
+            with: {
+                itens: true,
+                entidades: {
+                    with: {
+                        mochila: true
+                    }
                 }
-            })
-        ]);
+            }
+        });
             
         if(!result) {
-            throw new RevokeSessionError("Usuário não existe!");
+            throw new RevokeSessionError("Usuário em sala que não existe!");
         }
 
-        const { sala: _sala, mochila, ...entidade } = result;
-        const { itens, entidades, ...sala } = _sala;
-            
-        if(!entidade || !sala) {
-            throw new RevokeSessionError("Entidade em sala que não existe!");
+        const { itens, entidades, ...sala } = result;
+        
+        const index = entidades.findIndex(e => e.username === username);
+        if(index < 0 ) {
+            throw new RevokeSessionError("Jogador não está na sala!");
         }
+        const { mochila, ...jogador} = entidades.splice(index, 1)[0];
 
-        return { 
-            jogador: entidade, 
-            sala: sala, 
-            global: resultGlobal[0], 
+        return {
+            jogador: jogador,
+            sala: sala,
+            global: global!,
             itensNoChao: itens.filter(i => i.quantidade > 0),
             mochila: mochila.filter(i => i.quantidade > 0),
             entidadesNaSala: entidades,

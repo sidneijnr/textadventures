@@ -52,20 +52,22 @@ function descreverTudo(situacao: RespostaSituacao, situacaoAnterior?: RespostaSi
         if(jogador.mochila && jogador.mochila.length > 0) {
             termPrint("Na sua mochila você tem:");
             for(let item of jogador.mochila) {
-                termPrint(`  ${item.quantidade} ${item.descricao?.trim() || item.tipo}`);
+                termPrint(`  ${item.quantidade} ${item.descricao?.trim() || item.nome}`);
             }
         } else {
             termPrint("Sua mochila está vazia.");
         }
     }
 
-    if(sala.conexoes && sala.conexoes.length > 0) {
-        termPrint("conexões:");
-        for(let conexao of sala.conexoes) {
-            termPrint(`  ${conexao}`);
+    if(mudouSala) {
+        if(sala.conexoes && sala.conexoes.length > 0) {
+            termPrint("conexões:");
+            for(let conexao of sala.conexoes) {
+                termPrint(`  ${conexao}`);
+            }
+        } else {
+            termPrint("não há nenhuma direção para ir daqui.");
         }
-    } else {
-        termPrint("não há nenhuma direção para ir daqui.");
     }
 
     return {
@@ -130,9 +132,13 @@ export const principal = async () => {
             const args = partes.slice(1);
 
             // A FAZER: processar isso melhor kk
-            if(!acao || acao === "OLHAR" || acao === "MOCHILA") {
+            if(!acao || acao === "OLHAR") {
                 // Apenas olhar ao redor
                 situacao = descreverTudo(await fetchClient.salaOlhar(), null);
+            } else if (acao === "MOCHILA") {
+                let _situacao = situacao;
+                situacao = await fetchClient.salaOlhar();
+                descreverTudo(situacao, { ..._situacao, jogador: { ..._situacao.jogador, mochila: null } });
             } else if (acao === "SAIR") {
                 await fetchClient.logout();
                 termPrint("Até mais!");
@@ -143,7 +149,7 @@ export const principal = async () => {
                     quantidade = parseInt(args[0]);
                     args.shift();
                 }
-                const itemId = sala.itens?.find(i => i.tipo.toUpperCase() === args[0])?.id;
+                const itemId = sala.itens?.find(i => i.nome.toUpperCase() === args[0])?.id;
                 if(!itemId) {
                     termPrint("Não tem isso aqui.");
                     continue;
@@ -156,7 +162,7 @@ export const principal = async () => {
                     quantidade = parseInt(args[0]);
                     args.shift();
                 }
-                const itemId = jogador.mochila?.find(i => i.tipo.toUpperCase() === args[0])?.id;
+                const itemId = jogador.mochila?.find(i => i.nome.toUpperCase() === args[0])?.id;
                 if(!itemId) {
                     termPrint("Não tem isso aqui.");
                     continue;

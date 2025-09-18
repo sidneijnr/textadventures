@@ -4,20 +4,18 @@ import { getTupleFromKeys, UUID_ZERO } from './utils.ts';
 import { tableItens, tableLocais } from './itemSchema.ts';
 import { relations } from 'drizzle-orm';
 import { tableEntidades } from './entidadeSchema.ts';
+import { salas } from '../jogo/config.ts';
 
-//export const enumSalaNome = pgEnum('sala_nome', getTupleFromKeys(salas));
+export const enumSalaNome = pgEnum('sala_nome', getTupleFromKeys(salas));
 
 export const tableSalas = pgTable('salas', {
-    id: uuid('id').primaryKey().defaultRandom(),
-    // ID da sala que corresponde ao seu código (ex: "sala_do_trono")
-    //nome: enumSalaNome('nome').unique().notNull(),
+    // Referência para o local para itens associado a esta sala, criado pela trigger criar_local_automatico.
+    id: uuid('id').primaryKey().references(() => tableLocais.id, { onDelete: 'restrict' }).$defaultFn(() => UUID_ZERO),
 
-    nome: varchar('nome', { length: 100 }).$type<any>().unique().notNull(),
+    // ID da sala que corresponde ao seu código (ex: "Inicio")
+    nome: enumSalaNome('nome').unique().notNull(),
     
     atualizadoEm: timestamp('atualizado_em', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-
-    // Referência para o local para itens associado a esta entidade, criado pela trigger criar_local_automatico.
-    localId: uuid('local_id').references(() => tableLocais.id, { onDelete: 'restrict' }).$defaultFn(() => UUID_ZERO).unique().notNull(),
 
     // JSONB para armazenar estados mutáveis da sala
     // Ex: { "porta_trancada": true, "alavanca_puxada": false }

@@ -99,7 +99,7 @@ export const doFetchApi = async <T>(method: string, route: string, request?: obj
 };
 export type RespostaItens = {
     id: string;
-    tipo: string;
+    nome: string;
     descricao?: string;
     quantidade: number;
     atualizadoEm: string;
@@ -107,7 +107,6 @@ export type RespostaItens = {
 
 export type RespostaEntidades = {
     id: string;
-    localId: string;
     categoria: string;
     tipo: string;
     descricao?: string;
@@ -119,7 +118,6 @@ export type RespostaSituacao = {
     resposta: string;
     jogador: {
         id: string;
-        localId: string;
         username: string;
         salaId: string;
         mochila?: RespostaItens[] | null;
@@ -130,7 +128,6 @@ export type RespostaSituacao = {
 
 export type RespostaSala = {
     id: string;
-    localId: string;
     nome: string;
     descricao?: string;
     itens?: RespostaItens[] | null;
