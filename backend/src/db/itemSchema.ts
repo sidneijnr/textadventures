@@ -1,12 +1,12 @@
 import { pgTable, uuid, varchar, jsonb, check, type AnyPgColumn, timestamp, integer, uniqueIndex, pgEnum } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
-import { tableEntidades } from './entidadeSchema.js';
-import { tableSalas } from './salaSchema.js';
 import { type Estado, type EstadoItem } from './estadoSchema.ts';
-import { itens, type ItemTipo } from '../jogo/itens/itens.ts';
+import { _itens, type ItemTipo } from '../jogo/itens/itens.ts';
 import { getTupleFromKeys } from './utils.ts';
+import { relations } from 'drizzle-orm';
+import { tableEntidades } from './entidadeSchema.ts';
+import { tableSalas } from './salaSchema.ts';
 
-export const enumItemTipo = pgEnum('item_tipo', getTupleFromKeys(itens));
+export const enumItemTipo = pgEnum('item_tipo', getTupleFromKeys(_itens));
 
 export const tableLocais = pgTable('locais', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -42,5 +42,16 @@ export const tableItens = pgTable('itens', {
             .on(table.tipo, table.ondeId)
     ]
 );
+
+export const itemEntidadeRelation = relations(tableItens, ({ one }) => ({
+    entidade: one(tableEntidades, {
+        fields: [tableItens.ondeId],
+        references: [tableEntidades.localId],
+    }),
+    sala: one(tableSalas, {
+        fields: [tableItens.ondeId],
+        references: [tableSalas.localId],
+    }),
+}));
 
 export type Item = typeof tableItens.$inferSelect;

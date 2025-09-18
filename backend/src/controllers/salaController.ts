@@ -1,8 +1,8 @@
 import { type RequestHandler } from "express";
 import { SalaRepository } from "../repositories/salaRepository.ts";
 import { db } from "../db/drizzle.ts";
-import { Contexto } from "../jogo/contexto.ts";
-import { getSalaConfig, type SalaNome } from "../jogo/salas/salas.ts";
+import { Contexto, getSalaConfig } from "../jogo/contexto.ts";
+import { type SalaNome } from "../jogo/salas/salas.ts";
 import { parseRequest } from "../utils/docs.ts";
 import { salaDocs } from "../docs/salaDocs.ts";
 import type { User } from "../db/userSchema.ts";
@@ -13,13 +13,10 @@ export class SalaController {
 
         const ctx = await Contexto.carregar(usuario.username);
 
-        const result = await ctx.descricaoSala();
+        const result = await ctx.retornarSituacao();
         await ctx.salvar();
 
-        res.json({
-            ...ctx.retornarSituacao(),
-            sala: result
-        });
+        res.json(result);
     }
 
     static moverParaDirecao: RequestHandler<{ direcao: string }> = async (req, res) => {
@@ -39,7 +36,9 @@ export class SalaController {
             }
         }
 
+        const result = await ctx.retornarSituacao();
         await ctx.salvar();
-        res.json({ ...ctx.retornarSituacao() });
+
+        res.json(result);
     }
 }

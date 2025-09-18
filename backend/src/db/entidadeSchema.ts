@@ -2,8 +2,9 @@ import { pgTable, uuid, varchar, jsonb, timestamp, pgEnum } from 'drizzle-orm/pg
 import { tableSalas } from './salaSchema.js';
 import { tableUsers } from './userSchema.js';
 import { type Estado, type EstadoItem } from './estadoSchema.ts';
-import { tableLocais } from './itemSchema.ts';
+import { tableItens, tableLocais } from './itemSchema.ts';
 import { UUID_ZERO } from './utils.ts';
+import { relations, sql } from 'drizzle-orm';
 
 export const enumCategoriaEntidade = pgEnum('categoria_entidade', ['JOGADOR', 'NPC', 'OBJETO', 'CRIATURA']);
 
@@ -43,5 +44,13 @@ export const tableEntidades = pgTable('entidades', {
     // Ex: { "vida": 85, "vida_max": 100, "status": ["envenenado"] }
     estado: jsonb('estado').$type<Estado>().default({}).notNull(),
 });
+
+export const entidadeSalaRelation = relations(tableEntidades, ({ one, many }) => ({
+	sala: one(tableSalas, {
+		fields: [tableEntidades.salaId],
+		references: [tableSalas.id],
+	}),
+	mochila: many(tableItens)
+}));
 
 export type Entidade = typeof tableEntidades.$inferSelect;

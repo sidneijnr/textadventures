@@ -23,10 +23,10 @@ export class ItemController {
             }
         }
 
+        const result = await ctx.retornarSituacao();
         await ctx.salvar();
 
-        await Promise.all([ctx.getItensNoChao(), ctx.getMochila()]);
-        res.json({ ...ctx.retornarSituacao() });
+        res.json(result);
     }
 
     static largarItem: RequestHandler = async (req, res) => {
@@ -47,9 +47,9 @@ export class ItemController {
             }
         }
 
+        const result = await ctx.retornarSituacao();
         await ctx.salvar();
 
-        await Promise.all([ctx.getItensNoChao(), ctx.getMochila()]);
-        res.json({ ...ctx.retornarSituacao() });
+        res.json(result);
     }
 }

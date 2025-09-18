@@ -3,7 +3,7 @@ import { type Sala, tableSalas } from "../db/salaSchema.ts";
 import { alias } from "drizzle-orm/pg-core";
 import { type Entidade, tableEntidades } from "../db/entidadeSchema.ts";
 import { type Estado } from "../db/estadoSchema.ts";
-import { type Item, tableItens } from "../db/itemSchema.ts";
+import { type Item, tableItens, tableLocais } from "../db/itemSchema.ts";
 import { type DatabaseType } from "../db/drizzle.ts";
 import { RevokeSessionError } from "../middlewares/authMiddleware.ts";
 import { mapArrayWithTable } from "../db/utils.ts";
@@ -11,57 +11,29 @@ import type { SalaNome } from "../jogo/salas/salas.ts";
 
 export class SalaRepository {
     static async dadosIniciaisJogador(db: DatabaseType, username: string) {
-        const itensSubquery = db.select({
-            salaId: tableSalas.id,
-            sala_itens: sql`COALESCE(jsonb_agg(${tableItens}.*), '[]'::jsonb)`.mapWith(mapArrayWithTable(tableItens)).as("sala_itens"),
+        const [resultGlobal, result] = await Promise.all([
+            db.select().from(tableSalas).where(eq(tableSalas.nome, "Global")).limit(1),
+            db.query.tableEntidades.findFirst({
+                where: eq(tableEntidades.username, username),
+                with: {
+                    sala: {
+                        with: {
+                            itens: true,
+                            entidades: true
+                        }
+                    },
+                    mochila: true
+                }
             })
-            .from(tableItens)
-            .innerJoin(tableSalas, eq(tableItens.ondeId, tableSalas.localId))
-            .where(gte(tableItens.quantidade, 1))
-            .groupBy(tableSalas.id)
-            .as("itens_sub");
-
-        const mochilaSubquery = db.select({
-            entidadeId: tableEntidades.id,
-            mochila_itens: sql`COALESCE(jsonb_agg(${tableItens}.*), '[]'::jsonb)`.mapWith(mapArrayWithTable(tableItens)).as("mochila_itens"),
-            })
-            .from(tableItens)
-            .innerJoin(tableEntidades, eq(tableItens.ondeId, tableEntidades.localId))
-            .where(gte(tableItens.quantidade, 1))
-            .groupBy(tableEntidades.id)
-            .as("mochila_sub");
-
-        const entidadeSubquery = db.select({
-            entidadeSalaId: tableEntidades.salaId,
-            entidades: sql`COALESCE(jsonb_agg(${tableEntidades}.*), '[]'::jsonb)`.mapWith(mapArrayWithTable(tableEntidades)).as("entidades"),
-            })
-            .from(tableEntidades)
-            .groupBy(tableEntidades.salaId)
-            .as("entidade_sub");
-
-        const aliasSalaGlobal = alias(tableSalas, "global");
-        const result = await db.select({
-                sala: tableSalas,
-                entidade: tableEntidades,
-                global: aliasSalaGlobal,
-                itensNoChao: itensSubquery.sala_itens,
-                mochila: mochilaSubquery.mochila_itens,
-                entidadesNaSala: entidadeSubquery.entidades
-            })
-            .from(tableEntidades)
-            .leftJoin(tableSalas, eq(tableEntidades.salaId, tableSalas.id))
-            .leftJoin(aliasSalaGlobal, eq(aliasSalaGlobal.nome, "Global"))
-            .leftJoin(itensSubquery, eq(itensSubquery.salaId, tableSalas.id))
-            .leftJoin(mochilaSubquery, eq(mochilaSubquery.entidadeId, tableEntidades.id))
-            .leftJoin(entidadeSubquery, eq(entidadeSubquery.entidadeSalaId, tableSalas.id))
-            .where(eq(tableEntidades.username, username))
-            .limit(1);
+        ]);
             
-        if(!result || result.length === 0 || !result[0]) {
+        if(!result) {
             throw new RevokeSessionError("Usuário não existe!");
         }
-    
-        const { entidade, sala, global, itensNoChao, mochila, entidadesNaSala } = result[0];
+
+        const { sala: _sala, mochila, ...entidade } = result;
+        const { itens, entidades, ...sala } = _sala;
+            
         if(!entidade || !sala) {
             throw new RevokeSessionError("Entidade em sala que não existe!");
         }
@@ -69,10 +41,10 @@ export class SalaRepository {
         return { 
             jogador: entidade, 
             sala: sala, 
-            global: global!, 
-            itensNoChao: itensNoChao || [],
-            mochila: mochila || [],
-            entidadesNaSala: entidadesNaSala || []
+            global: resultGlobal[0], 
+            itensNoChao: itens.filter(i => i.quantidade > 0),
+            mochila: mochila.filter(i => i.quantidade > 0),
+            entidadesNaSala: entidades,
         };
     }
 

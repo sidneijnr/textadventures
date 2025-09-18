@@ -7,8 +7,8 @@ import { type Sala } from "../db/salaSchema.ts";
 import { EntidadeRepository } from "../repositories/entidadeRepository.ts";
 import { ItemRepository } from "../repositories/itemRepository.ts";
 import { SalaRepository } from "../repositories/salaRepository.ts";
-import { getItemConfig, type ItemTipo } from "./itens/itens.ts";
-import { getSalaConfig, type SalaNome } from "./salas/salas.ts";
+import { _itens, type ItemTipo } from "./itens/itens.ts";
+import { _salas, type SalaNome } from "./salas/salas.ts";
 
 export type ItemType<ITEM = string> = {
     descricao: (ctx: Contexto) => void | string | Promise<string | void>;
@@ -31,6 +31,27 @@ export type SalaType<SALA = string, ITEM = string> = {
     }[];
     estadoInicial?: Estado;
 };
+
+export const itens: Record<ItemTipo, ItemType<ItemTipo>> = _itens;
+
+export const getItemConfig = (itemTipo: ItemTipo) => {
+    let itemConfig = itens[itemTipo];
+    if(!itemConfig) {
+        throw new Error(`Item com tipo ${itemTipo} não existe na configuração do jogo!`);
+    }
+
+    return itemConfig;
+}
+
+export const salas: Record<SalaNome, SalaType<SalaNome, ItemTipo>> = _salas;
+
+export const getSalaConfig = (salaId: SalaNome) => {
+    let salaConfig = salas[salaId];
+    if(!salaConfig) {
+        throw new Error(`Sala com id ${salaId} não existe na configuração do jogo!`);
+    }
+    return salaConfig;
+}
 
 // Serve como service que interage com o banco de dados, e guarda o estado atual do jogo
 export class Contexto {
@@ -81,12 +102,13 @@ export class Contexto {
 
     private str: string;
 
-    constructor({ jogador, sala, global, itensNoChao, mochila }: {
+    constructor({ jogador, sala, global, itensNoChao, mochila, entidadesNaSala }: {
         jogador: Entidade,
         sala: Sala | null,
         global: Sala,
         itensNoChao: Item[] | null,
         mochila: Item[] | null,
+        entidadesNaSala: Entidade[] | null,
     }) {
         this.jogador = jogador;
         this.global = global;
@@ -94,6 +116,7 @@ export class Contexto {
         this.str = "";
         this.itensNoChao = itensNoChao;
         this.mochila = mochila;
+        this.entidadesNaSala = entidadesNaSala;
     }
 
     static async carregar(username: string): Promise<Contexto> {
@@ -101,42 +124,69 @@ export class Contexto {
         return new Contexto(result);
     }
 
-    retornarSituacao() {
+    static async _descricaoItens(ctx: Contexto, itens: Item[]) {
+        const descricaoItens = [];
+        for(let item of itens) {
+            const itemConfig = getItemConfig(item.tipo as ItemTipo);
+            const descr = await itemConfig.descricao(ctx);
+            if(descr) {
+                ctx.escrevaln(descr);
+            }
+            descricaoItens.push({
+                id: item.id,
+                tipo: item.tipo,
+                quantidade: item.quantidade,
+                atualizadoEm: item.atualizadoEm,
+                descricao: ctx.obterTexto(),
+            });
+        }
+        return descricaoItens;
+    }
+
+    async retornarSituacao() {
+        const sala = await this.getSala();
+        let salaConfig = getSalaConfig(sala.nome as SalaNome);
+
+        const resposta = this.obterTexto();
+
+        const descr = await salaConfig.descricao(this);
+        if(descr) {
+            this.escrevaln(descr);
+        }
+        const descricaoSala = this.obterTexto();
+
+        const descricaoItensNochao = await Contexto._descricaoItens(this, await this.getItensNoChao());
+        const descricaoMochila = await Contexto._descricaoItens(this, await this.getMochila());
+        const descricaoEntidades = (await this.getEntidadesNaSala()).map(e => ({
+            id: e.id,
+            localId: e.localId,
+            categoria: e.categoria,
+            tipo: e.tipo,
+            username: e.username,
+            atualizadoEm: e.atualizadoEm,
+            descricao: e.tipo === 'JOGADOR' ? "" : `um ${e.tipo.toLowerCase()}`,
+        }));
+
         return {
-            resposta: this.obterTexto(),
+            resposta: resposta,
             jogador: {
                 id: this.jogador.id,
                 localId: this.jogador.localId,
                 username: this.jogador.username,
                 salaId: this.jogador.salaId,                
                 atualizadoEm: this.jogador.atualizadoEm,
-                mochila: this.mochila ? this.mochila.map(i => ({
-                    id: i.id,
-                    tipo: i.tipo,
-                    quantidade: i.quantidade,
-                    atualizadoEm: i.atualizadoEm
-                })) : undefined,
+                mochila: descricaoMochila,
             },
-            sala: this.sala ? {
-                id: this.sala.id,
-                localId: this.sala.localId,
-                nome: this.sala.nome,
-                atualizadoEm: this.sala.atualizadoEm,
-                itens: this.itensNoChao ? this.itensNoChao.map(i => ({
-                    id: i.id,
-                    tipo: i.tipo,
-                    quantidade: i.quantidade,
-                    atualizadoEm: i.atualizadoEm
-                })) : undefined,
-                entidades: this.entidadesNaSala ? this.entidadesNaSala.map(e => ({
-                    id: e.id,
-                    localId: e.localId,
-                    categoria: e.categoria,
-                    tipo: e.tipo,
-                    username: e.username,
-                    atualizadoEm: e.atualizadoEm
-                })) : undefined,
-            } : undefined,
+            sala: {
+                id: sala.id,
+                localId: sala.localId,
+                nome: sala.nome,
+                atualizadoEm: sala.atualizadoEm,
+                conexoes: Object.keys(salaConfig.conexoes),
+                descricao: descricaoSala,
+                itens: descricaoItensNochao,
+                entidades: descricaoEntidades,
+            },
         };
     }
 
@@ -158,6 +208,9 @@ export class Contexto {
 
         this.sala = sala;
         this._salvarSala = false;
+
+        this.entidadesNaSala = null;
+        this.itensNoChao = null;
     }
 
     async moverItem(item: Item, quantidade: number, onde: { localId?: string } | null) {
@@ -215,63 +268,7 @@ export class Contexto {
     // =========================================================================
     //                 Funções para escrever na resposta  
     // =========================================================================
-    static async _descricaoItens(ctx: Contexto, itens: Item[]) {
-        const descricaoItens = [];
-        for(let item of itens) {
-            const itemConfig = getItemConfig(item.tipo as ItemTipo);
-            const descr = await itemConfig.descricao(ctx);
-            if(descr) {
-                ctx.escrevaln(descr);
-            }
-            descricaoItens.push({
-                id: item.id,
-                tipo: item.tipo,
-                quantidade: item.quantidade,
-                atualizadoEm: item.atualizadoEm,
-                descricao: ctx.obterTexto(),
-            });
-        }
-        return descricaoItens;
-    }
-
-    async descricaoSala() {
-        const sala = await this.getSala();
-        let salaConfig = getSalaConfig(sala.nome as SalaNome);
-
-        const descr = await salaConfig.descricao(this);
-        if(descr) {
-            this.escrevaln(descr);
-        }
-        const descricaoSala = this.obterTexto();
-
-        const descricaoItens = await Contexto._descricaoItens(this, await this.getItensNoChao());
-        const conexoes = Object.keys(salaConfig.conexoes);
-
-        const entidades = await this.getEntidadesNaSala();
-        const descricaoEntidades = [];
-        for(let entidade of entidades) {
-            descricaoEntidades.push({
-                id: entidade.id,
-                localId: entidade.localId,
-                categoria: entidade.categoria,
-                tipo: entidade.tipo,
-                username: entidade.username,
-                atualizadoEm: entidade.atualizadoEm,
-                descricao: entidade.tipo === 'JOGADOR' ? "" : `um ${entidade.tipo.toLowerCase()}`,
-            });
-        }
-        
-        return {
-            id: sala.id,
-            localId: sala.localId,
-            nome: sala.nome,
-            descricao: descricaoSala, 
-            itens: descricaoItens,
-            entidades: descricaoEntidades,
-            conexoes
-        };
-    }
-
+    
     escrevaln(...str: unknown[]) {
         this.escreva(...str, "\n");
     }
