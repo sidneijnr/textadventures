@@ -1,7 +1,8 @@
 import { type RequestHandler } from "express";
 import { salaDocs } from "../docs/salaDocs.ts";
-import { execCallbackOrValue, getSalaConfig } from "../jogo/config.ts";
 import { ControllerBase } from "./ControllerBase.ts";
+import { execArrowOrValue } from "../jogo/types.ts";
+import { SalaBase, type SalaBaseStatic } from "../jogo/salas/base.ts";
 
 export class SalaController extends ControllerBase {
     static descreverSalaAtual: RequestHandler = async (req, res) => {
@@ -10,18 +11,21 @@ export class SalaController extends ControllerBase {
         await this.sendResponse(ctx, req, res);
     }
 
-    static moverParaDirecao: RequestHandler<{ direcao: string }> = async (req, res) => {
-        const { ctx, body } = await this.loadRequest(salaDocs["/sala/mover"].post.schema, req, res);
+    static executarAcao: RequestHandler = async (req, res) => {
+        const { ctx, body } = await this.loadRequest(salaDocs["/sala/acao"].post.schema, req, res);
 
-        const sala = await ctx.getSala();
-        const salaConfig = getSalaConfig(sala.nome);
-        const conexoes = await execCallbackOrValue(salaConfig.conexoes, ctx, sala);
-        if(!(body.direcao in conexoes)) {
+        const sala = ctx.sala;
+        const acoes = await sala._acoes(ctx, body.extra ?? null);
+        if(!(body.acao in acoes) || body.acao.startsWith("$")) {
             ctx.escrevaln("Você não pode fazer isso.");
         } else {
-            const novaSalaNome = await execCallbackOrValue(conexoes[body.direcao], ctx, sala);
-            if(novaSalaNome) {
-                await ctx.moverParaSala(novaSalaNome);
+            const result = await execArrowOrValue(acoes[body.acao]);
+            if(result) {
+                if(typeof result !== "string") {
+                    await ctx.moverParaSala(result as typeof SalaBase & SalaBaseStatic);
+                } else {
+                    ctx.escrevaln(result);
+                }
             }
         }
 

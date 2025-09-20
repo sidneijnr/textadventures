@@ -3,10 +3,7 @@ import { getTupleFromKeys, UUID_ZERO } from './utils.ts';
 import { relations } from 'drizzle-orm';
 import { tableEntidades } from './entidadeSchema.ts';
 import { tableSalas } from './salaSchema.ts';
-import { itens } from '../jogo/config.ts';
 import type { Estado } from '../jogo/types.ts';
-
-export const enumItemNome = pgEnum('item_nome', getTupleFromKeys(itens));
 
 export const tableLocais = pgTable('locais', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -16,7 +13,7 @@ export const tableItens = pgTable('itens', {
     id: uuid('id').primaryKey().defaultRandom(),
 
     // Que item é esse (ex: "espada", "pocao", "chave")
-    nome: enumItemNome('nome').notNull(),
+    nome: varchar('nome', { length: 255 }).notNull(),
 
     // ID da pilha, calculado a partir do estado
     // Ex: "pedra", "espada-999", "pocao-12345"

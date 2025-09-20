@@ -43,15 +43,19 @@ export const salaDocs = {
             }
         }
     },
-    "/sala/mover": {
+    "/sala/acao": {
         post: {
-            summary: "Move o jogador para uma direção",
+            summary: "Faz uma ação na sala",
             description: "Tenta mover o jogador para uma sala adjacente na direção especificada (ex: norte, sul, leste, oeste).",
             schema: {
                 body: z.object({
-                    direcao: z.string().toUpperCase().meta({
-                        description: "Direção para a qual se mover.",
-                        example: "norte",
+                    acao: z.string().toUpperCase().meta({
+                        description: "Direção para a qual se mover ou uma ação",
+                        example: "N",
+                    }),
+                    extra: z.record(z.string(), z.any()).optional().meta({
+                        description: "Dados extras para a ação, se necessário",
+                        example: { chave: "valor" },
                     }),
                 }),
                 response: respostaSituacao

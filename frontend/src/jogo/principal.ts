@@ -19,13 +19,13 @@ function mudouAlgo(_obj1: undefined | null | ComponenteAtualizavel | ComponenteA
     return false;
 }
 
-function descreverTudo(situacao: RespostaSituacao, situacaoAnterior?: RespostaSituacao | null) {
+function descreverTudo(situacao: RespostaSituacao, situacaoAnterior?: Partial<RespostaSituacao> | null) {
     const { resposta, sala, jogador } = situacao;
 
     termPrint(resposta);
 
-    let mudouSala = sala.id !== situacaoAnterior?.sala.id;
-    if(mudouSala || sala.descricao !== situacaoAnterior?.sala.descricao) {
+    let mudouSala = sala.id !== situacaoAnterior?.sala?.id;
+    if(mudouSala || sala.descricao !== situacaoAnterior?.sala?.descricao) {
         termPrint(sala.descricao?.trim() || "");
     }
 
@@ -33,27 +33,33 @@ function descreverTudo(situacao: RespostaSituacao, situacaoAnterior?: RespostaSi
         termPrint("Você vê aqui:");
         for(let item of sala.itens) {
             termPrint(`  ${item.quantidade} ${item.descricao?.trim()}`);
+            if(item.acoes && item.acoes.length > 0) {
+                termPrint(`    (${item.acoes.join(", ")})`);
+            }
         }
     }
 
     const entidades = sala.entidades?.filter(e => 
         (e.tipo !== "JOGADOR" || (Date.now() - new Date(e.atualizadoEm).getTime() <= 1000 * 60 * 10)) 
-        && e.username !== jogador.username
     ) || [];
     if(entidades && entidades.length > 0 && (mudouSala || mudouAlgo(entidades, situacaoAnterior?.sala?.entidades))) {
         termPrint("está aqui:");
         for(let entidade of entidades) {
-            if(entidade.id !== jogador.username) {
-                termPrint(`  ${entidade.tipo === "JOGADOR" ? entidade.username : entidade.tipo} ${entidade.descricao?.trim()}`);
-            }
+            termPrint(`  ${entidade.tipo === "JOGADOR" ? entidade.username : entidade.tipo} ${entidade.descricao?.trim()}`);
+            if(entidade.acoes && entidade.acoes.length > 0) {
+                termPrint(`    (${entidade.acoes.join(", ")})`);
+            }            
         }
     }
     
-    if(mudouAlgo(jogador.mochila, situacaoAnterior?.jogador?.mochila)) {
-        if(jogador.mochila && jogador.mochila.length > 0) {
+    if(mudouAlgo(jogador.itens, situacaoAnterior?.jogador?.itens)) {
+        if(jogador.itens && jogador.itens.length > 0) {
             termPrint("Na sua mochila você tem:");
-            for(let item of jogador.mochila) {
+            for(let item of jogador.itens) {
                 termPrint(`  ${item.quantidade} ${item.descricao?.trim() || item.nome}`);
+                if(item.acoes && item.acoes.length > 0) {
+                    termPrint(`    (${item.acoes.join(", ")})`);
+                }
             }
         } else {
             termPrint("Sua mochila está vazia.");
@@ -61,9 +67,9 @@ function descreverTudo(situacao: RespostaSituacao, situacaoAnterior?: RespostaSi
     }
 
     if(mudouSala) {
-        if(sala.conexoes && sala.conexoes.length > 0) {
-            termPrint("conexões:");
-            for(let conexao of sala.conexoes) {
+        if(sala.acoes && sala.acoes.length > 0) {
+            termPrint("ações:");
+            for(let conexao of sala.acoes) {
                 termPrint(`  ${conexao}`);
             }
         }
@@ -129,17 +135,94 @@ export const principal = async () => {
                 return p.length > 0
             });
 
-            let acao = partes.length > 0 ? partes[0] : undefined;
+            let acao = partes.length > 0 ? partes[0] : "OLHAR";
+            let item: RespostaItens[] = [];
+            let entidade: RespostaEntidades[] = [];
+            let nome: string | undefined = undefined;
+            let quantidade = 1;
             const args = partes.slice(1);
+            if(args.length > 0) {
+                if(args[0].match(/^\d+$/)) {
+                    quantidade = parseInt(args[0]);
+                    args.shift();
+                }
+            }
+            if(args.length > 0) {
+                nome = args[0];
+                args.shift();
+            }
 
-            // A FAZER: processar isso melhor kk
+            // Mochila
+            item = jogador.itens?.filter(i => (i.nome.toUpperCase() === nome || nome === undefined) && i.acoes?.includes(acao)) || [];
+            
+            // Chão
+            item.push(...(sala.itens?.filter(i => (i.nome.toUpperCase() === nome || nome === undefined) && i.acoes?.includes(acao)) || []));
+
+            // Entidades
+            for(let ent of sala.entidades || []) {
+                // Tipo ou nome do jogador
+                if((ent.tipo.toUpperCase() === nome || ent.username?.toUpperCase() === nome || nome === undefined) && ent.acoes?.includes(acao)) {
+                    entidade.push(ent);
+                }
+
+                // Itens da entidade
+                item.push(...(ent.itens?.filter(i => (i.nome.toUpperCase() === nome || nome === undefined) && i.acoes?.includes(acao)) || []));
+            }
+            
+
+            if(!acao || acao === "OLHAR" || acao === "MOCHILA") {
+                // Apenas olhar ao redor
+                if(acao === "MOCHILA") {
+                    situacao = descreverTudo(await fetchClient.salaOlhar(), { ...situacao, jogador: undefined });
+                } else {
+                    situacao = descreverTudo(await fetchClient.salaOlhar(), { ...situacao, sala: undefined});
+                }
+            } else if (acao === "SAIR" || acao === "LOGOUT") {
+                await fetchClient.logout();
+                termPrint("Até mais!");
+                break;
+            } else {
+                if(item.length > 1) {
+                    termPrint("Seja mais específico:");
+                    for(let k = 0; k < item.length; k++) {
+                        const i = item[k];
+                        termPrint(`  ${String.fromCharCode(k + "A".charCodeAt(0))}: ${i.quantidade} ${i.nome} ${i.descricao?.trim() || ""}`);
+                    }
+                    const escolha = (await prompt("Escolha um: ")).trim();
+                    const escolhaNum = escolha.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+                    if(!isNaN(escolhaNum) && escolhaNum >= 0 && escolhaNum < item.length) {
+                        item = [item[escolhaNum]];
+                    } else {
+                        termPrint("Escolha inválida.");
+                        continue;
+                    }
+                }
+
+                if(item.length > 0) {
+                    situacao = descreverTudo(await fetchClient.itemAcao(item[0].id, acao, { quantidade, texto: args.slice(1).join(" ") || undefined }), situacao);
+                } else if(entidade.length > 0) {
+                    termPrint("Ações em entidades ainda não implementadas.");
+                    //situacao = descreverTudo(await fetchClient.entidadeAcao(entidade.id, acao, { quantidade, texto: args.slice(1).join(" ") || undefined }), situacao);
+                } else {
+                    switch(acao) {
+                        case "NORTE": acao = "N"; break;
+                        case "SUL": acao = "S"; break;
+                        case "LESTE": acao = "L"; break;
+                        case "OESTE": acao = "O"; break;
+                    }
+
+                    situacao = descreverTudo(await fetchClient.salaMover(acao), situacao);
+                }
+            }
+
+            /*// A FAZER: processar isso melhor kk
             if(!acao || acao === "OLHAR") {
                 // Apenas olhar ao redor
-                situacao = descreverTudo(await fetchClient.salaOlhar(), null);
+                situacao = descreverTudo(await fetchClient.salaOlhar(), { ...situacao, sala: undefined});
             } else if (acao === "MOCHILA") {
                 let _situacao = situacao;
                 situacao = await fetchClient.salaOlhar();
-                descreverTudo(situacao, { ..._situacao, jogador: { ..._situacao.jogador, mochila: null } });
+                descreverTudo(situacao, { ..._situacao, jogador: { ..._situacao.jogador, itens: null } });
             } else if (acao === "SAIR") {
                 await fetchClient.logout();
                 termPrint("Até mais!");
@@ -156,22 +239,22 @@ export const principal = async () => {
                     continue;
                 }
 
-                situacao = descreverTudo(await fetchClient.itemPegar(itemId, quantidade), situacao);                
+                situacao = descreverTudo(await fetchClient.itemAcao(itemId, "PEGAR", { quantidade }), situacao);
             } else if(acao === "LARGAR") {
                 let quantidade = 1;
                 if(args[0].match(/^\d+$/)) {
                     quantidade = parseInt(args[0]);
                     args.shift();
                 }
-                const itemId = jogador.mochila?.find(i => i.nome.toUpperCase() === args[0])?.id;
+                const itemId = jogador.itens?.find(i => i.nome.toUpperCase() === args[0])?.id;
                 if(!itemId) {
                     termPrint("Você não tem isso.");
                     continue;
                 }
 
-                situacao = descreverTudo(await fetchClient.itemLargar(itemId, quantidade), situacao);
+                situacao = descreverTudo(await fetchClient.itemAcao(itemId, "LARGAR", { quantidade }), situacao);
             } else if (acao === "ESCREVER" || acao === "LER") { // Melhorar isso...
-                let itemId = jogador.mochila?.find(i => i.nome.toUpperCase() === args[0])?.id;
+                let itemId = jogador.itens?.find(i => i.nome.toUpperCase() === args[0])?.id;
                 if(!itemId) {
                     itemId = sala.itens?.find(i => i.nome.toUpperCase() === args[0])?.id;
                     if(!itemId) {
@@ -195,7 +278,7 @@ export const principal = async () => {
                 }
 
                 situacao = descreverTudo(await fetchClient.salaMover(acao), situacao);
-            }
+            }*/
         } catch(err) {
             if(err instanceof APIError && err.status === 401) {
                 termPrint("Você precisa fazer login.");

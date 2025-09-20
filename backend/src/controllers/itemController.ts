@@ -1,17 +1,18 @@
 import { type RequestHandler } from "express";
 import { itemDocs } from "../docs/itemDocs.ts";
 import { ControllerBase } from "./ControllerBase.ts";
-import { execCallbackOrValue, getItemConfig } from "../jogo/config.ts";
+import { execArrowOrValue } from "../jogo/types.ts";
+import type { SalaBase, SalaBaseStatic } from "../jogo/salas/base.ts";
 
 export class ItemController extends ControllerBase {
     static acaoItem: RequestHandler = async (req, res) => {
         const { ctx, body } = await this.loadRequest(itemDocs["/item/acao"].post.schema, req, res);
 
-        const mochila = await ctx.getMochila();
-        let achouObjeto = mochila.find(o => o.id === body.item);
+        const mochila = ctx.jogador.itens;
+        let achouObjeto = mochila.find(i => i.item.id === body.item);
         if(!achouObjeto) {
-            const objetosChao = await ctx.getItensNoChao();
-            achouObjeto = objetosChao.find(o => o.id === body.item);
+            const objetosChao = ctx.sala.itens;
+            achouObjeto = objetosChao.find(i => i.item.id === body.item);
         }
         if(!achouObjeto) {
             ctx.escrevaln("Não tem isso aqui.");
@@ -19,21 +20,25 @@ export class ItemController extends ControllerBase {
             return;
         }
 
-        const itemConfig = getItemConfig(achouObjeto.nome);
-        const acoes = await execCallbackOrValue(itemConfig.acoes ?? {}, ctx, achouObjeto, body.extra ?? null);
-        if(!(body.acao in acoes)) {
+        //const acoes = await execCallbackOrValue(itemConfig.acoes ?? {}, ctx, achouObjeto, body.extra ?? null);
+        const acoes = await achouObjeto._acoes(ctx, body.extra ?? null);
+        if(!(body.acao in acoes) || body.acao.startsWith("$")) {
             ctx.escrevaln("Você não pode fazer isso.");
         } else {
-            const resultado = await execCallbackOrValue(acoes[body.acao], ctx, achouObjeto, body.extra ?? null);
-            if(resultado) {
-                ctx.escrevaln(resultado);
+            const result = await execArrowOrValue(acoes[body.acao]);
+            if(result) {
+                if(typeof result !== "string") {
+                    await ctx.moverParaSala(result as typeof SalaBase & SalaBaseStatic);
+                } else {
+                    ctx.escrevaln(result);
+                }
             }
         }
 
         await this.sendResponse(ctx, req, res);
     }
 
-    static pegarItem: RequestHandler = async (req, res) => {
+    /*static pegarItem: RequestHandler = async (req, res) => {
         const { ctx, body } = await this.loadRequest(itemDocs["/item/pegar"].post.schema, req, res);
 
         let objetos = await ctx.getItensNoChao();
@@ -67,5 +72,5 @@ export class ItemController extends ControllerBase {
         }
 
         await this.sendResponse(ctx, req, res);
-    }
+    }*/
 }

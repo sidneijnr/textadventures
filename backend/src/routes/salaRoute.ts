@@ -6,7 +6,7 @@ export const getSalaRouter = () => {
     const router = express.Router();
     
     router.get("/sala/olhar", authMiddleware, SalaController.descreverSalaAtual);
-    router.post("/sala/mover", authMiddleware, SalaController.moverParaDirecao);
+    router.post("/sala/acao", authMiddleware, SalaController.executarAcao);
     
     return router;
 };

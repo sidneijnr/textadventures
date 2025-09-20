@@ -3,7 +3,7 @@ import { type DocPaths } from "../utils/docs.ts";
 import { respostaSituacao } from "./schemas.ts";
 
 export const itemDocs = {
-    "/item/pegar": {
+    /*"/item/pegar": {
         post: {
             summary: "Pega um item do chão",
             description: "Adiciona um item, que está no chão da sala atual, ao inventário do jogador.",
@@ -40,7 +40,7 @@ export const itemDocs = {
                 response: respostaSituacao
             }
         }
-    },
+    },*/
     "/item/acao": {
         post: {
             summary: "Realiza uma ação com um item",

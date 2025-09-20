@@ -2,7 +2,6 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import { tableEntidades } from "../db/entidadeSchema.ts";
 import { type DatabaseType } from "../db/drizzle.ts";
 import { tableSalas } from "../db/salaSchema.ts";
-import type { SalaNome } from "../jogo/config.ts";
 import type { Estado } from "../jogo/types.ts";
 import { tableItens } from "../db/itemSchema.ts";
 
@@ -17,7 +16,7 @@ export class EntidadeRepository {
         .where(eq(tableEntidades.id, entidadeId));
     }
 
-    static async moveParaSalaNome(db: DatabaseType, entidadeId: string, salaNome: SalaNome) {
+    static async moveParaSalaNome(db: DatabaseType, entidadeId: string, salaNome: string) {
         const result = await db.update(tableEntidades)
         .set({ 
             ondeId: tableSalas.id,

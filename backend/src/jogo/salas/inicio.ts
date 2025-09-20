@@ -1,6 +1,9 @@
-import type { SalaInfo } from "../types.ts";
+import type { Sala } from "../../db/salaSchema.ts";
 import { Contexto } from "../contexto.ts";
-
+import { itensPadrao } from "../itens/inicio.ts";
+import type { Estado } from "../types.ts";
+import { SalaBase, type ItemInicial } from "./base.ts";
+/*
 export const salasInicio = {
     Quarto: {
         descricao: (ctx: Contexto) => {
@@ -8,6 +11,7 @@ export const salasInicio = {
         },
         conexoes: {
             "S": "Inicio",
+            "N": "Cozinha" as any,
             "DORMIR": (ctx: Contexto) => {
                 ctx.escrevaln("Você deita na cama e dorme por um tempo, mas nada mudou quando acorda.");
             },
@@ -221,7 +225,7 @@ export const salasInicio = {
         }
     },
     Tesouro: {
-        descricao: async (ctx: Contexto, info: SalaInfo) => {
+        descricao: async (ctx: Contexto, info: Sala) => {
             if(info.estado?.bauAberto) {
                 ctx.escrevaln("Você está em uma sala de pedra decorada com um baú aberto no centro, sem nada dentro");
             } else {
@@ -240,7 +244,7 @@ export const salasInicio = {
                     await ctx.moverParaSala("Caverna");
                 }
             },
-            "ABRIR": async (ctx: Contexto, info: SalaInfo) => {
+            "ABRIR": async (ctx: Contexto, info: Sala) => {
                 if(info.estado?.bauAberto) {
                     ctx.escrevaln("O baú já está aberto, sem nada dentro");
                     return;
@@ -268,7 +272,7 @@ export const salasInicio = {
                     ctx.escrevaln("Você sobe na pedra mas ainda não alcança o baú");
                 }
             },
-            "FECHAR": async (ctx: Contexto, info: SalaInfo) => {
+            "FECHAR": async (ctx: Contexto, info: Sala) => {
                 if(!info.estado?.bauAberto) {
                     ctx.escrevaln("O baú já está fechado");
                     return;
@@ -291,4 +295,84 @@ export const salasInicio = {
             luz: false
         }
     },
-} as const;
+} as const;*/
+
+class Quarto extends SalaBase {
+    static nome = "Quarto";
+    static itensIniciais = (): ItemInicial[] => [{ 
+        item: itensPadrao.Papel, 
+        quantidade: 1,
+        estadoInicial: {
+            texto: "??/??/????: Quantos dias estou aqui? Lembrar: O que tem do outro lado daquela ponte de cordas?"
+        }
+    }];
+    static estadoInicial = (): Estado => ({ luz: true });
+
+    descricao(ctx: Contexto) {
+        return "Você está em um quarto simples sem janelas, na parede há vários riscos 一 二 三, há uma cama, uma mesa com um candelabro e uma porta ao sul";
+    }
+
+    acoes(ctx: Contexto) {
+        return {
+            "S": Inicio,
+            "DORMIR": () => {
+                return "Você deita na cama e dorme por um tempo, mas nada mudou quando acorda.";
+            },
+            "ACENDER": async () => {
+                // A FAZER
+            }
+        };
+    }
+}
+
+class Inicio extends SalaBase {
+    static nome = "Inicio";
+    static itensIniciais = (): ItemInicial[] => [{ 
+        item: itensPadrao.Lampiao, 
+        quantidade: 1,
+        estadoInicial: {
+            luz: false
+        }
+    }, {
+        item: itensPadrao.Papel,
+        quantidade: 5,
+        estadoInicial: {
+            texto: ""
+        }
+    }];
+    static estadoInicial = (): Estado => ({ luz: true });
+
+    descricao(ctx: Contexto) {
+        return "Você acorda em uma sala sem janelas (subsolo?), você não sabe porquê está aqui, ao norte há um quarto, Ao leste há uma passagem";
+    }
+
+    acoes(ctx: Contexto) {
+        return {
+            "N": Quarto,
+            "L": Labirinto1
+        };
+    }
+}
+
+class Labirinto1 extends SalaBase {
+    static nome = "Labirinto1";
+    static estadoInicial = (): Estado => ({ luz: false });
+
+    descricao(ctx: Contexto) {
+        return "Todos os lados há passagens, tudo igual, não há como saber onde está.";
+    }
+
+    acoes(ctx: Contexto) {
+        return {
+            "O": Inicio,
+            //"L": Labirinto2,
+            //"S": Labirinto4
+        };
+    }
+}
+
+export const salaasInicio = {
+    Quarto,
+    Inicio,
+    Labirinto1
+};

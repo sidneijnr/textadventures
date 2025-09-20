@@ -4,6 +4,8 @@ import type { User } from "../db/userSchema.ts";
 import { parseRequest, type ControllerSchema, type ParsedRequest, type ParsedRequestUndef } from "../utils/docs.ts";
 import { itemDocs } from "../docs/itemDocs.ts";
 import type z from "zod";
+import { SalaRepository } from "../repositories/salaRepository.ts";
+import { db } from "../db/drizzle.ts";
 
 export class ControllerBase {
     static async loadRequest<Q extends z.ZodType, B extends z.ZodType, P extends z.ZodType, R extends z.ZodType>(
@@ -18,7 +20,11 @@ export class ControllerBase {
         const usuario = req.session! as User;
         const parsed = parseRequest(schema, req) as any;
 
-        const ctx = await Contexto.carregar(usuario.username);
+        const {global, ondeId} = await SalaRepository.dadosIniciaisJogador(db, usuario.username);
+        if(!ondeId || !global) {
+            throw new Error("Usuário ou entidade não existe!");
+        }
+        const ctx = new Contexto(await Contexto.carregar(usuario.username, ondeId, global));
 
         return {
             ctx,

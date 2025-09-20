@@ -1,7 +1,6 @@
 import { and, eq, gte, sql } from "drizzle-orm";
 import { type Item, tableItens } from "../db/itemSchema.ts";
 import { type DatabaseType } from "../db/drizzle.ts";
-import type { ItemTipo } from "../jogo/config.ts";
 import type { Estado } from "../jogo/types.ts";
 
 export class ItemRepository {
@@ -51,7 +50,7 @@ export class ItemRepository {
     }
 
     static async adicionarItem(db: DatabaseType, itemAtual: {
-        nome: ItemTipo,
+        nome: string,
         pilhaId: string,
         estado?: Estado | null,
         criadoEm?: Date,

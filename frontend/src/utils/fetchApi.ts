@@ -100,28 +100,27 @@ export const doFetchApi = async <T>(method: string, route: string, request?: obj
 export type RespostaItens = {
     id: string;
     nome: string;
-    descricao?: string;
     quantidade: number;
     atualizadoEm: string;
+    descricao?: string;
+    acoes?: string[] | null;
 }
 
 export type RespostaEntidades = {
     id: string;
     categoria: string;
     tipo: string;
-    descricao?: string;
     username?: string;
     atualizadoEm: string;
+    descricao?: string;
+    acoes?: string[] | null;
+    itens?: RespostaItens[] | null;
 }
 
 export type RespostaSituacao = {
     resposta: string;
-    jogador: {
-        id: string;
-        username: string;
+    jogador: RespostaEntidades & {
         ondeId: string;
-        mochila?: RespostaItens[] | null;
-        atualizadoEm: string;
     };
     sala: RespostaSala;
 }
@@ -129,11 +128,11 @@ export type RespostaSituacao = {
 export type RespostaSala = {
     id: string;
     nome: string;
+    atualizadoEm: string;
+    acoes?: string[] | null;
     descricao?: string;
     itens?: RespostaItens[] | null;
     entidades?: RespostaEntidades[] | null;
-    conexoes?: string[] | null;
-    atualizadoEm: string;
 }
 
 export const fetchClient = {
@@ -142,9 +141,7 @@ export const fetchClient = {
     logout: () => doFetchApi<void>("post", "/auth/logout"),
     
     salaOlhar: () => doFetchApi<{ sala: RespostaSala } & RespostaSituacao>("get", "/sala/olhar"),
-    salaMover: (direcao: string) => doFetchApi<RespostaSituacao>("post", "/sala/mover", { body: { direcao } }),
-    itemPegar: (item: string, quantidade?: number) => doFetchApi<RespostaSituacao>("post", "/item/pegar", { body: { item, quantidade } }),
-    itemLargar: (item: string, quantidade?: number) => doFetchApi<RespostaSituacao>("post", "/item/largar", { body: { item, quantidade } }),
+    salaMover: (acao: string) => doFetchApi<RespostaSituacao>("post", "/sala/acao", { body: { acao } }),
     itemAcao: (item: string, acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/item/acao", { body: { item, acao, extra } }),
 };
 

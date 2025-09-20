@@ -4,21 +4,22 @@ import { db } from "./drizzle.ts";
 import { type Sala, tableSalas } from "./salaSchema.ts";
 import { type Item, tableItens } from "./itemSchema.ts";
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
-import { gerarPilhaId, salas, type SalaNome } from "../jogo/config.ts";
+import { _salas, gerarPilhaId, getSalaConfig } from "../jogo/config.ts";
+import type { ItemBase, ItemBaseStatic } from "../jogo/itens/base.ts";
 
 // Assume que acabou de dar drizzle kit push, então as tabelas estão criadas mas vazias
 // OU, se já tiver dados, não insere duplicados
 try {
     const insertSalas: typeof tableSalas.$inferInsert[] = [];
     const insertItens: typeof tableItens.$inferInsert[] = [];
-    for(let [salaNome, sala] of Object.entries(salas)) {
+    _salas.forEach((classe, classeNome) => {
         const salaUUID = randomUUID();
         insertSalas.push({
             id: salaUUID,
-            nome: salaNome as SalaNome,
-            estado: sala.estadoInicial
+            nome: classe.nome,
+            estado: classe.estadoInicial?.() || null
         });
-    }
+    });
 
     // Atualiza ou insere as salas iniciais
     const todasAsSalas = await db.insert(tableSalas)
@@ -32,22 +33,29 @@ try {
         }).returning({ id: tableSalas.id, nome: tableSalas.nome });
 
     for(let sala of todasAsSalas) {
-        const configSala = salas[sala.nome as keyof typeof salas];
-        if(!configSala) continue;
+        const classe = _salas.get(sala.nome);
 
-        if(configSala.itensIniciais) {
-            for(let item of configSala.itensIniciais) {
-                const pilhaId = gerarPilhaId(item.nome, item.estadoInicial);
-                insertItens.push({
-                    nome: item.nome,
-                    pilhaId: pilhaId,
-                    quantidade: item.quantidade,
-                    quantidadeInicial: item.quantidade,
-                    ondeId: sala.id,
-                    estado: item.estadoInicial
-                });
+        const itensIniciais = classe?.itensIniciais?.() || [];
+        
+        for(let info of itensIniciais) {
+            const item = info.item as typeof ItemBase & ItemBaseStatic;
+            const nomeItem = item.nome;
+            let estadoInicial = info.estadoInicial || item.estadoInicial?.() || null;
+            if(!estadoInicial || Object.keys(estadoInicial).length === 0) {
+                estadoInicial = null;
             }
+
+            const pilhaId = gerarPilhaId(nomeItem, estadoInicial);
+            insertItens.push({
+                nome: nomeItem,
+                pilhaId: pilhaId,
+                quantidade: info.quantidade,
+                quantidadeInicial: info.quantidade,
+                ondeId: sala.id,
+                estado: estadoInicial
+            });
         }
+        
     }
 
     // Deleta todos os itens que estão no chão das salas
