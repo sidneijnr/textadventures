@@ -12,6 +12,8 @@ import type { Sala } from "../db/salaSchema.ts";
 import type { Item } from "../db/itemSchema.ts";
 import { execArrowOrValue, type Estado } from "./types.ts";
 import { ItemRepository } from "../repositories/itemRepository.ts";
+import type { Entidade } from "../db/entidadeSchema.ts";
+import e from "express";
 
 // Serve como service que interage com o banco de dados, e guarda o estado atual do jogo
 export class Contexto {
@@ -120,8 +122,19 @@ export class Contexto {
 
         for(let ent of entidades) {
             const entidadeMochila: ItemBase[] = [];
-            const { mochila, ...entidade } = ent;
+            let entidade: Entidade;
+            let mochila: Item[];
+            const { entidadeRef, mochila: entMochila, ...entInfo } = ent;
+            if(entidadeRef) {
+                const { mochila: entidadeRefMochila, ...entidadeRefInfo } = entidadeRef;
+                entidade = entidadeRefInfo;
+                mochila = entidadeRefMochila;
+            } else {
+                entidade = entInfo;
+                mochila = entMochila;
+            }
             const entidadeConfig = await getEntidadeConfig(ent.tipo, { entidade: entidade, onde: salaConfig, itens: entidadeMochila, filhos: [] });
+            entidadeConfig.ehReferencia = entidadeRef ? true : false;
             for(let item of mochila) {
                 const itemConfig = await getItemConfig(item.nome, { item: item, onde: entidadeConfig });
                 entidadeMochila.push(itemConfig);
@@ -130,6 +143,7 @@ export class Contexto {
 
             if(entidade.tipo === 'JOGADOR' && entidade.username === username) {
                 jogador = entidadeConfig as EntidadeJogador;
+                jogador.outroJogador = false;
             }
         }
 
@@ -222,6 +236,8 @@ export class Contexto {
         }*/
 
         let descricaoSala = "";
+        let descricaoItensNochao;
+        let descricaoEntidades;
         let acoes = {};
         if(!this.sala.estaVisivel()) {
             this.escrevaln("Está muito escuro, você não consegue ver nada.");
@@ -232,12 +248,12 @@ export class Contexto {
             if(descr && typeof descr === "string") {
                 this.escrevaln(descr);
             }
-            descricaoSala = this.obterTexto();
-        }
+            descricaoSala = this.obterTexto();       
 
-        const { itens, entidades } = this.sala.getFilhosVisiveis();
-        const descricaoItensNochao = await this._descricaoItens(itens);
-        const descricaoEntidades = await this._descricaoEntidades(entidades.filter(e => e.entidade.id !== this.jogador.entidade.id));
+            const { itens, entidades } = this.sala.getFilhosVisiveis();
+            descricaoItensNochao = await this._descricaoItens(itens);
+            descricaoEntidades = await this._descricaoEntidades(entidades.filter(e => e.entidade.id !== this.jogador.entidade.id));
+        }
 
         return {
             resposta: resposta,

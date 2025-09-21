@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, jsonb, timestamp, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, jsonb, timestamp, pgEnum, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { tableSalas } from './salaSchema.js';
 import { tableUsers } from './userSchema.js';
 import { tableItens, tableLocais } from './itemSchema.ts';
@@ -15,6 +15,8 @@ export const tableEntidades = pgTable('entidades', {
 
     // Onde a entidade está atualmente, se onde ele está for deletado, ela também será deletada (onDelete cascade)
     ondeId: uuid('onde_id').references(() => tableLocais.id, { onDelete: 'cascade' }).notNull(),
+
+    refId: uuid('ref_id').references((): AnyPgColumn => tableEntidades.id, { onDelete: 'set null' }),
 
     // Se a entidade for um jogador, aqui está o link para sua conta
     username: varchar('username', { length: 50 }).references(() => tableUsers.username, { onDelete: 'restrict' }).unique(),
@@ -37,6 +39,11 @@ export const entidadeSalaRelation = relations(tableEntidades, ({ one, many }) =>
 		references: [tableSalas.id],
 	}),
 	mochila: many(tableItens),
+    entidadeRef: one(tableEntidades, {
+        fields: [tableEntidades.refId],
+        references: [tableEntidades.id],
+        relationName: "entidadeRef",
+    }),
     // DEPOIS: implementar relações hierárquicas entre entidades. (Para poder carregar caixas com itens)
     // entidadeFilhas: many(tableEntidades, { relationName: 'entidadeFilhas' }),
     // entidadePai: one(tableEntidades, { 

@@ -40,6 +40,13 @@ export class SalaRepository {
                     with: {
                         mochila: {
                             where: gte(tableItens.quantidade, 1)
+                        },
+                        entidadeRef: {
+                            with: {
+                                mochila: {
+                                    where: gte(tableItens.quantidade, 1)
+                                }
+                            }
                         }
                     }
                 }

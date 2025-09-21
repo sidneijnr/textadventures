@@ -2,7 +2,7 @@ import type { Entidade } from "../../db/entidadeSchema.ts";
 import type { Item } from "../../db/itemSchema.ts";
 import type { Contexto } from "../contexto.ts";
 import type { ItemBase, ItemBaseStatic } from "../itens/base.ts";
-import type { AcoesCallbackResult, ItemInicial, SalaBase } from "../salas/base.ts";
+import { SalaBase, type AcoesCallbackResult, type ItemInicial, type SalaBaseStatic } from "../salas/base.ts";
 import type { ArrowOrValue, Estado, MaybePromise } from "../types.ts";
 
 export type EntidadeInicial = {
@@ -10,6 +10,7 @@ export type EntidadeInicial = {
     itensIniciais?: ItemInicial[];
     filhosIniciais?: EntidadeInicial[];
     estadoInicial?: Estado;
+    ref?: { sala: typeof SalaBase & SalaBaseStatic }; // Quando for entidade ref. Procura a entidade do tipo na sala indicada.
 };
 
 export interface EntidadeBaseStatic {
@@ -29,7 +30,6 @@ export abstract class EntidadeBase {
     async _acoes(ctx: Contexto, extra?: Estado | null): Promise<AcoesCallbackResult> {
         return {
             "$DESCRICAO": async () => await this.descricao(ctx),
-            "FALAR": () => "Não há ninguém aqui para ouvir você.",
             ...(await this.acoes(ctx, extra))
         };
     }
@@ -38,6 +38,7 @@ export abstract class EntidadeBase {
     onde: SalaBase | EntidadeBase;
     itens: ItemBase[];
     filhos: EntidadeBase[];
+    ehReferencia: boolean = false;
 
     constructor(info: {entidade: Entidade, onde: SalaBase | EntidadeBase, itens?: ItemBase[], filhos?: EntidadeBase[]}) {
         this.entidade = info.entidade;

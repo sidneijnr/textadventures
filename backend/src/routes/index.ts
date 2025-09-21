@@ -5,6 +5,7 @@ import { COOKIE_NAME, COOKIE_OPTIONS, RevokeSessionError } from "../middlewares/
 import { getItemRouter } from "./itemRoute.ts";
 import { getSalaRouter } from "./salaRoute.ts";
 import { getAuthRouter } from "./authRoute.ts";
+import { getEntidadeRouter } from "./entidadeRoute.ts";
 
 const routes = (app: Express) => {
 	// Só fazer log das rotas se estiver em desenvolvimento, desativar em produção
@@ -16,10 +17,11 @@ const routes = (app: Express) => {
         getItemRouter(),
         getSalaRouter(),
         getDocsRouter(),
-		getAuthRouter()
+		getAuthRouter(),
+		getEntidadeRouter()
     );
 
-	app.post("/cookie", (req, res) => {
+	/*app.post("/cookie", (req, res) => {
 		const value = req.body.cookie;
 		if(value) {
 			res.setHeader('Set-Cookie', value);
@@ -31,7 +33,7 @@ const routes = (app: Express) => {
             cookie: req.headers["cookie"],
             session: req.session,
 		});
-	})
+	})*/
 
 	app.use((req,res,next) => {
 		res.sendStatus(404);

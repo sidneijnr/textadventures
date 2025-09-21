@@ -1,6 +1,6 @@
 import type { Sala } from "../../db/salaSchema.ts";
 import type { Contexto } from "../contexto.ts";
-import type { EntidadeBase, EntidadeInicial } from "../entidades/base.ts";
+import type { EntidadeBase, EntidadeBaseStatic, EntidadeInicial } from "../entidades/base.ts";
 import type { ItemBase, ItemBaseStatic } from "../itens/base.ts";
 import type { ArrowOrValue, Estado, MaybePromise } from "../types.ts";
 
@@ -47,6 +47,10 @@ export abstract class SalaBase {
 
     obterItensPorNome(item: typeof ItemBase & ItemBaseStatic): ItemBase[] {
         return this.itens.filter(i => i.item.nome === item.nome);
+    }
+
+    obterEntidadePorNome<T extends typeof EntidadeBase>(entidade: T & EntidadeBaseStatic): InstanceType<T>[] {
+        return this.entidades.filter(e => e.entidade.tipo === entidade.nome) as InstanceType<T>[];
     }
 
     temLuz(): boolean {

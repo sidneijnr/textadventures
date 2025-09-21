@@ -7,6 +7,7 @@ import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { _salas, gerarPilhaId, getSalaConfig } from "../jogo/config.ts";
 import type { ItemBase, ItemBaseStatic } from "../jogo/itens/base.ts";
 import { tableEntidades } from "./entidadeSchema.ts";
+import type { EntidadeInicial } from "../jogo/entidades/base.ts";
 
 // Assume que acabou de dar drizzle kit push, então as tabelas estão criadas mas vazias
 // OU, se já tiver dados, não insere duplicados
@@ -34,6 +35,44 @@ try {
             }
         }).returning({ id: tableSalas.id, nome: tableSalas.nome });
 
+    function insertEntidade (entidadeInfo: EntidadeInicial, salaId: string, refId?: string) {
+        const entidade = entidadeInfo.entidade;
+        let estadoInicial = entidadeInfo.estadoInicial || entidade.estadoInicial?.() || null;
+        if(!estadoInicial || Object.keys(estadoInicial).length === 0) {
+            estadoInicial = null;
+        }
+        
+        const entidadeId = randomUUID();
+        
+        const itensIniciais = entidadeInfo.itensIniciais || [];
+        for(let info of itensIniciais) {
+            const item = info.item;
+            const nomeItem = item.nome;
+            let estadoInicial = info.estadoInicial || item.estadoInicial?.() || null;
+            if(!estadoInicial || Object.keys(estadoInicial).length === 0) {
+                estadoInicial = null;
+            }
+
+            const pilhaId = gerarPilhaId(nomeItem, estadoInicial);
+            insertItens.push({
+                nome: nomeItem,
+                pilhaId: pilhaId,
+                quantidade: info.quantidade,
+                quantidadeInicial: info.quantidade,
+                ondeId: entidadeId,
+                estado: estadoInicial
+            });
+        }
+
+        insertEntidades.push({
+            id: entidadeId,
+            tipo: entidade.nome,
+            ondeId: salaId,
+            estado: estadoInicial,
+            refId: refId || null,
+        });
+    }
+
     for(let sala of todasAsSalas) {
         const classe = _salas.get(sala.nome);
 
@@ -60,39 +99,28 @@ try {
 
         const entidadesIniciais = classe?.entidadesIniciais?.() || [];
         for(let entidadeInfo of entidadesIniciais) {
+            if(entidadeInfo.ref) continue; // Referências são processadas depois
+
+            insertEntidade(entidadeInfo, sala.id);
+        }
+    }
+
+    for(let sala of todasAsSalas) {
+        const classe = _salas.get(sala.nome);
+
+        const entidadesIniciais = classe?.entidadesIniciais?.() || [];
+        for(let entidadeInfo of entidadesIniciais) {
             const entidade = entidadeInfo.entidade;
-            let estadoInicial = entidadeInfo.estadoInicial || entidade.estadoInicial?.() || null;
-            if(!estadoInicial || Object.keys(estadoInicial).length === 0) {
-                estadoInicial = null;
-            }
+
+            if(!entidadeInfo.ref) continue;
+
+            const salaRef = todasAsSalas.find(s => s.nome === entidadeInfo.ref!.sala.nome);
+            if(!salaRef) throw new Error("Sala de referência para entidade não encontrada: "+entidadeInfo.ref.sala.nome);
+
+            const entidadeRef = insertEntidades.find(e => e.tipo === entidade.nome && e.ondeId === salaRef.id);
+            if(!entidadeRef) throw new Error("Entidade de referência não encontrada na sala "+salaRef.nome+": "+entidade.nome);
             
-            const entidadeId = randomUUID();
-            insertEntidades.push({
-                id: entidadeId,
-                tipo: entidade.nome,
-                ondeId: sala.id,
-                estado: estadoInicial
-            });
-
-            const itensIniciais = entidadeInfo.itensIniciais || [];
-            for(let info of itensIniciais) {
-                const item = info.item;
-                const nomeItem = item.nome;
-                let estadoInicial = info.estadoInicial || item.estadoInicial?.() || null;
-                if(!estadoInicial || Object.keys(estadoInicial).length === 0) {
-                    estadoInicial = null;
-                }
-
-                const pilhaId = gerarPilhaId(nomeItem, estadoInicial);
-                insertItens.push({
-                    nome: nomeItem,
-                    pilhaId: pilhaId,
-                    quantidade: info.quantidade,
-                    quantidadeInicial: info.quantidade,
-                    ondeId: entidadeId,
-                    estado: estadoInicial
-                });
-            }
+            insertEntidade(entidadeInfo, sala.id, entidadeRef.id);
         }
     }
 

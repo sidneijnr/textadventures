@@ -147,7 +147,11 @@ class Papel extends ItemBase {
                 }
 
                 await ctx.moverItem(this, { ondeId: item.ondeId, quantidade: 1, estado: { texto: txt } });
-                return "Você escreve no papel.";
+                if(txt) {
+                    return "Você escreve no papel.";
+                } else {
+                    return "Você apaga o papel.";
+                }
             }
         };
     }

@@ -23,15 +23,15 @@ export abstract class ItemBase {
         if(this.onde instanceof EntidadeBase && this.onde.entidade.id === ctx.jogador.entidade.id) {
             acoes["LARGAR"] = async () => {
                 await ctx.moverItem(this, { 
-                    quantidade: extra?.quantidade && typeof extra?.quantidade === "number" ? extra.quantidade : 1,
+                    quantidade: extra?.quantidade && typeof extra?.quantidade === "number" ? extra.quantidade : this.item.quantidade,
                     ondeId: ctx.sala.sala.id
                 });
                 return "Largou.";
             };
-        } else if(this.onde instanceof SalaBase && this.onde.sala.id === ctx.sala.sala.id) {
+        } else {
             acoes["PEGAR"] = async () => {
                 await ctx.moverItem(this, { 
-                    quantidade: extra?.quantidade && typeof extra?.quantidade === "number" ? extra.quantidade : 1,
+                    quantidade: extra?.quantidade && typeof extra?.quantidade === "number" ? extra.quantidade : this.item.quantidade,
                     ondeId: ctx.jogador.entidade.id
                 });
                 return "Pegou.";

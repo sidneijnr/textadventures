@@ -47,8 +47,8 @@ function descreverTudo(situacao: RespostaSituacao, situacaoAnterior?: Partial<Re
             if(entidade.acoes && entidade.acoes.length > 0) {
                 termPrint(`    (${entidade.acoes.join(", ")})`);
             }
-            if(entidade.itens) {
-                termPrint("  que está com:");
+            if(entidade.itens && entidade.itens.length > 0) {
+                termPrint("  que contém:");
                 for(let item of entidade.itens) {
                     termPrint(`     ${item.quantidade} ${item.descricao?.trim() || item.nome}`);
                     if(item.acoes && item.acoes.length > 0) {
@@ -143,7 +143,7 @@ export const principal = async () => {
             let item: RespostaItens[] = [];
             let entidade: RespostaEntidades[] = [];
             let nome: string | undefined = undefined;
-            let quantidade = 1;
+            let quantidade: number | undefined = undefined;
             const args = partes.slice(1);
             if(args.length > 0) {
                 if(args[0].match(/^\d+$/)) {
@@ -186,16 +186,30 @@ export const principal = async () => {
                 termPrint("Até mais!");
                 break;
             } else {
-                if(item.length > 1) {
+                if(item.length + entidade.length > 1) {
                     termPrint("Seja mais específico:");
-                    for(let k = 0; k < item.length; k++) {
+                    let k = 0;
+                    for(; k < item.length; k++) {
                         const i = item[k];
                         termPrint(`  ${String.fromCharCode(k + "A".charCodeAt(0))}: ${i.quantidade} ${i.nome} ${i.descricao?.trim() || ""}`);
                     }
+                    for(; k < entidade.length; k++) {
+                        const e = entidade[k];
+                        termPrint(`  ${String.fromCharCode(k + "A".charCodeAt(0))}: ${e.tipo} ${e.descricao?.trim() || ""}`);
+                    }
                     const escolha = (await prompt("Escolha um: ")).trim();
                     const escolhaNum = escolha.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
-                    if(!isNaN(escolhaNum) && escolhaNum >= 0 && escolhaNum < item.length) {
+                    if(isNaN(escolhaNum) || escolhaNum < 0) {
+                        termPrint("Escolha inválida.");
+                        continue;
+                    }
+
+                    if(escolhaNum < item.length) {
                         item = [item[escolhaNum]];
+                        entidade = [];
+                    } else if (escolhaNum - item.length < entidade.length) {
+                        entidade = [entidade[escolhaNum - item.length]];
+                        item = [];
                     } else {
                         termPrint("Escolha inválida.");
                         continue;
@@ -203,10 +217,9 @@ export const principal = async () => {
                 }
 
                 if(item.length > 0) {
-                    situacao = descreverTudo(await fetchClient.itemAcao(item[0].id, acao, { quantidade, texto: args.slice(1).join(" ") || undefined }), situacao);
+                    situacao = descreverTudo(await fetchClient.itemAcao(item[0].id, acao, { quantidade, texto: args.join(" ") || undefined }), situacao);
                 } else if(entidade.length > 0) {
-                    termPrint("Ações em entidades ainda não implementadas.");
-                    //situacao = descreverTudo(await fetchClient.entidadeAcao(entidade.id, acao, { quantidade, texto: args.slice(1).join(" ") || undefined }), situacao);
+                    situacao = descreverTudo(await fetchClient.entidadeAcao(entidade[0].id, acao, { quantidade, texto: args.join(" ") || undefined }), situacao);
                 } else {
                     switch(acao) {
                         case "NORTE": acao = "N"; break;
