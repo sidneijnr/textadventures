@@ -1,8 +1,8 @@
 import anyAscii from "any-ascii";
 import { passwordPrompt, prompt, termPrint } from "../terminal";
 import { APIError, fetchClient, type RespostaEntidades, type RespostaItens, type RespostaSala, type RespostaSituacao } from "../utils/fetchApi";
-import { CommandParser } from "../utils/commandParser";
-import { Acao } from "../utils/comandoConfig";
+import { CommandParser, ParserError } from "../utils/commandParser";
+import { Acao, type AcaoValue, acoesConfig } from "../utils/comandoConfig";
 
 type ComponenteAtualizavel = { id: string, atualizadoEm: string };
 function mudouAlgo(_obj1: undefined | null | ComponenteAtualizavel | ComponenteAtualizavel[], _obj2?: null | ComponenteAtualizavel | ComponenteAtualizavel[]) {
@@ -126,30 +126,36 @@ const fazerLogin = async () => {
     }
 }
 
-export const desambiguar = async (acao: string, alvos: Record<string, { sinonimos: string[], ref: RespostaItens | RespostaEntidades }>, alvosMatch: {match: string, confidence: number}[]) => {
+export const desambiguar = async (
+    mensagem: string,
+    acao: string, 
+    alvos: Record<string, { sinonimos: string[], ref: RespostaItens | RespostaEntidades }>, 
+    alvosMatch: {match: string, confidence: number}[],
+    arg: number
+) => {
     let item: RespostaItens[] = [];
     let entidade: RespostaEntidades[] = [];
     for(let result of alvosMatch) {
         const alvo = alvos[result.match]?.ref;
         if("tipo" in alvo) {
-            if(alvo.acoes?.includes(acao))
+            if(arg !== 1 || alvo.acoes?.includes(acao))
             entidade.push(alvo);
         } else {
-            if(alvo.acoes?.includes(acao))
+            if(arg !== 1 || alvo.acoes?.includes(acao))
             item.push(alvo as RespostaItens);
         }
     }
 
-    if(item.length + entidade.length > 1) {
-        termPrint("Seja mais específico:");
+    if((item.length + entidade.length) > 1 && (!acao || acoesConfig[acao as AcaoValue].args >= arg)) {
+        termPrint(mensagem);
         let k = 0;
         for(; k < item.length; k++) {
             const i = item[k];
-            termPrint(`  ${String.fromCharCode(k + "A".charCodeAt(0))}: ${i.quantidade} ${i.nome} ${i.descricao?.trim() || ""}`);
+            termPrint(`  ${String.fromCharCode(k + "A".charCodeAt(0))}: ${i.quantidade} ${i.descricao?.trim() || ""} (${i.acoes?.join(", ")})`);
         }
         for(; k < entidade.length; k++) {
             const e = entidade[k];
-            termPrint(`  ${String.fromCharCode(k + "A".charCodeAt(0))}: ${e.tipo} ${e.descricao?.trim() || ""}`);
+            termPrint(`  ${String.fromCharCode(k + "A".charCodeAt(0))}: ${e.descricao?.trim() || ""} (${e.acoes?.join(", ")})`);
         }
         const escolha = (await prompt("Escolha um: ")).trim();
         const escolhaNum = escolha.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
@@ -182,33 +188,13 @@ export const principal = async () => {
             }
 
             let { sala, jogador } = situacao;
-
-            const alvos: Record<string, { sinonimos: string[], ref: RespostaItens | RespostaEntidades }> = {};
             
-            for(let item of jogador.itens || []) {
-                alvos[item.id] = { sinonimos: [item.nome], ref: item };
-            }
-            for(let item of sala.itens || []) {
-                alvos[item.id] = { sinonimos: [item.nome], ref: item };
-            }
-            for(let ent of sala.entidades || []) {
-                alvos[ent.id] = { sinonimos: [ent.tipo], ref: ent };
-                if(ent.username) {
-                    alvos[ent.id].sinonimos.push(ent.username);
-                }
-                
-                for(let item of ent.itens || []) {
-                    alvos[item.id] = { sinonimos: [item.nome], ref: item };
-                }
-            }
-            
+            const alvos = CommandParser.buildContext(situacao);
             const parser = new CommandParser(await prompt(jogador.username+"> "), { alvos });
             const { acao, quantidade, alvoA: _alvoA, alvoB: _alvoB, resto } = parser.parse();
 
-            console.log(alvos, _alvoA, _alvoB);
-                      
-            const alvoA = await desambiguar(acao, alvos, _alvoA);
-            const alvoB = await desambiguar(acao, alvos, _alvoB);
+            const alvoA = await desambiguar("Seja mais específico: ", acao, alvos, _alvoA, 1);
+            const alvoB = await desambiguar("Com oq? ", acao, alvos, _alvoB, 2);
 
             if(!acao || acao === Acao.Olhar || acao === Acao.Mochila) {
                 // Apenas olhar ao redor
@@ -222,7 +208,6 @@ export const principal = async () => {
                 termPrint("Até mais!");
                 break;
             } else {
-                console.log(acao, quantidade, alvoA, alvoB, resto);
                 if(alvoA.item) {
                     situacao = descreverTudo(await fetchClient.itemAcao(alvoA.item.id, acao, { quantidade, item: alvoB.item?.id, entidade: alvoB.entidade?.id, texto: resto || undefined }), situacao);
                 } else if(alvoA.entidade) {
@@ -240,8 +225,10 @@ export const principal = async () => {
             }
 
             console.error(err);
-            termPrint("Erro:", err?.toString());
+            termPrint("Erro:", (err as any)?.message);
 
+            if(err instanceof ParserError) continue;
+            
             // Pergunta se quer tentar novamente
             const tentarNovamente = (await prompt("\nQuer continuar? (S/N) ")).trim().toUpperCase();
             if(tentarNovamente !== "S" && tentarNovamente !== "SIM") {

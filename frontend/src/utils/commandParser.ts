@@ -1,9 +1,15 @@
 import { distance, distance as levenshteinDistance } from 'fastest-levenshtein';
 import anyAscii from 'any-ascii';
-import { Acao, acoesConfig } from './comandoConfig';
+import { Acao, acoesConfig, type AcaoValue } from './comandoConfig';
+import type { RespostaEntidades, RespostaItens, RespostaSituacao } from './fetchApi';
 
 // --- Interfaces para Estruturar os Dados do Jogo ---
-type AcaoValue = typeof Acao[keyof typeof Acao];
+export class ParserError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "ParserError";
+    }
+}
 
 interface GameContext<T> {
     alvos: Record<string, { sinonimos: string[], ref: T }>;
@@ -24,7 +30,28 @@ export class CommandParser<T> {
     private args: string[];
     private context: GameContext<T>;
 
-    private static MATCH_THRESHOLD = 2;
+    static buildContext({jogador, sala}: RespostaSituacao) {
+        const alvos: Record<string, { sinonimos: string[], ref: RespostaItens | RespostaEntidades }> = {};
+        
+        for(let item of jogador.itens || []) {
+            alvos[item.id] = { sinonimos: item.nome.split(" "), ref: item };
+        }
+        for(let item of sala.itens || []) {
+            alvos[item.id] = { sinonimos: item.nome.split(" "), ref: item };
+        }
+        for(let ent of sala.entidades || []) {
+            alvos[ent.id] = { sinonimos: ent.tipo.split(" "), ref: ent };
+            if(ent.username) {
+                alvos[ent.id].sinonimos.push(ent.username);
+            }
+            
+            for(let item of ent.itens || []) {
+                alvos[item.id] = { sinonimos: item.nome.split(" "), ref: item };
+            }
+        }
+
+        return alvos;
+    }
 
     constructor(command: string, context: GameContext<T>) {
         this.rawCommand = command;
@@ -42,7 +69,7 @@ export class CommandParser<T> {
         this.argsi = 0;
     }
 
-    private findBestMatch(term: string, candidates: Record<string, { sinonimos: string[] }>) {
+    private findBestMatch(term: string, candidates: Record<string, { sinonimos: string[] }>, threshold = 2) {
         const keys = Object.keys(candidates);
         const matches: { match: string; confidence: number }[]  = [];
 
@@ -66,7 +93,7 @@ export class CommandParser<T> {
                 }
             }
 
-            const threshold = Math.min(CommandParser.MATCH_THRESHOLD, Math.floor(term.length / 2));
+            threshold = Math.min(threshold, Math.floor(term.length / 2));
             if (match && minDistance <= threshold) {
                 const confidence = term.length > 0 ? 1 - (minDistance / term.length) : 0;
                 matches.push({ match, confidence: confidence });
@@ -102,7 +129,7 @@ export class CommandParser<T> {
                 [Acao.Artigos]: acoesConfig[Acao.Artigos],
                 [Acao.Preposicoes]: acoesConfig[Acao.Preposicoes],
                 [Acao.Contracoes]: acoesConfig[Acao.Contracoes],
-            }).at(0) || { match: null, confidence: 0 };
+            }, 0).at(0) || { match: null, confidence: 0 };
             
             if(!match) {
                 return { confidence: 0, texto: palavra};
@@ -142,17 +169,17 @@ export class CommandParser<T> {
         if(cmd.acao === Acao.Ir) {
             cmd = this.proximoComando();
             if(!cmd.acao || !DIRECOES.includes(cmd.acao)) {
-                throw new Error("Comando 'ir' deve ser seguido por uma direção válida.");
+                throw new ParserError("Comando 'ir' deve ser seguido por uma direção válida.");
             }
         }
 
         if(!cmd.acao) {
             const sorteio = Math.floor(Math.random() * 5);
-            if(sorteio === 0) throw new Error("Comando desconhecido. Precisa de ajuda? escreva 'ajuda'.");
-            if(sorteio === 1) throw new Error("sflhs fsfh sd fjsdhfsdjfsdfsd sdfsdf - Foi isso que entendi");
-            if(sorteio === 2) throw new Error("Me desculpe?");
-            if(sorteio === 3) throw new Error("Tem certeza que não precisa de ajuda?");
-            throw new Error("... ?");
+            if(sorteio === 0) throw new ParserError("Comando desconhecido. Precisa de ajuda? escreva 'ajuda'.");
+            if(sorteio === 1) throw new ParserError("sflhs fsfh sd fjsdhfsdjfsdfsd sdfsdf - Foi isso que entendi");
+            if(sorteio === 2) throw new ParserError("Me desculpe?");
+            if(sorteio === 3) throw new ParserError("Tem certeza que não precisa de ajuda?");
+            throw new ParserError("... ?");
         }
 
         let acao = cmd.acao as AcaoValue;
@@ -168,7 +195,7 @@ export class CommandParser<T> {
         if(oq.texto && ACOES_QUANTIDADE.includes(acao) && oq.texto.match(/^\d+$/)) {
             quantidade = parseInt(oq.texto);
             if(quantidade <= 0) {
-                throw new Error(`A quantidade deve ser maior que zero.`);
+                throw new ParserError(`A quantidade deve ser maior que zero.`);
             }
 
             oq = this.proximoArgumento();
@@ -185,7 +212,7 @@ export class CommandParser<T> {
 
         const alvoA = this.findBestMatch(oq.texto, this.context.alvos);
         if(alvoA.length === 0) {
-            throw new Error(`Não há nenhum '${oq.texto}' aqui`);
+            throw new ParserError(`Não há nenhum '${oq.texto}' aqui`);
         }
         
         if(acao === Acao.Usar) {
@@ -195,7 +222,7 @@ export class CommandParser<T> {
             
             const usarAcao = this.proximoComando();
             if(!usarAcao.acao) {
-                throw new Error(`Você quer usar ${oq.texto} para fazer o quê?`);
+                throw new ParserError(`Você quer usar ${oq.texto} para fazer o quê?`);
             }
 
             acao = usarAcao.acao as AcaoValue; 
@@ -245,7 +272,7 @@ export class CommandParser<T> {
 
         const alvoB = this.findBestMatch(comoq.texto, this.context.alvos) || { match: null };
         if(alvoB.length === 0) {
-            throw new Error(`Não há nenhum '${comoq.texto}' aqui`);
+            throw new ParserError(`Não há nenhum '${comoq.texto}' aqui`);
         }
 
         return { acao, quantidade, alvoA: alvoA, alvoB: alvoB, resto: this.args.slice(this.argsi).join(" ") };

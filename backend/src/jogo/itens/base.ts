@@ -1,8 +1,9 @@
 import type { Item } from "../../db/itemSchema.ts";
+import { Acao } from "../comandos/comandoConfig.ts";
 import type { Contexto } from "../contexto.ts";
 import { EntidadeBase } from "../entidades/base.ts";
-import { SalaBase, type AcoesCallbackResult } from "../salas/base.ts";
-import type { ArrowOrValue, Estado, MaybePromise } from "../types.ts";
+import { SalaBase, type AcaoExtraPopulado, type AcoesCallbackResult } from "../salas/base.ts";
+import type { Estado, MaybePromise } from "../types.ts";
 
 export interface ItemBaseStatic {
     nome: string;
@@ -13,17 +14,17 @@ export abstract class ItemBase {
     descricao(ctx: Contexto): MaybePromise<string | void> {
         return;
     }
-    acoes(ctx: Contexto, extra?: Estado | null): MaybePromise<AcoesCallbackResult> {
+    acoes(ctx: Contexto, extra?: AcaoExtraPopulado | null): MaybePromise<AcoesCallbackResult> {
         return {};
     }
 
-    async _acoes(ctx: Contexto, extra?: Estado | null): Promise<AcoesCallbackResult> {
+    async _acoes(ctx: Contexto, extra?: AcaoExtraPopulado | null): Promise<AcoesCallbackResult> {
         const acoes: AcoesCallbackResult = {};
 
         if(this.onde instanceof EntidadeBase && this.onde.entidade.id === ctx.jogador.entidade.id) {
             acoes["LARGAR"] = async () => {
                 await ctx.moverItem(this, { 
-                    quantidade: extra?.quantidade && typeof extra?.quantidade === "number" ? extra.quantidade : this.item.quantidade,
+                    quantidade: extra?.quantidade || this.item.quantidade,
                     ondeId: ctx.sala.sala.id
                 });
                 return "Largou.";
@@ -31,7 +32,7 @@ export abstract class ItemBase {
         } else {
             acoes["PEGAR"] = async () => {
                 await ctx.moverItem(this, { 
-                    quantidade: extra?.quantidade && typeof extra?.quantidade === "number" ? extra.quantidade : this.item.quantidade,
+                    quantidade: extra?.quantidade || this.item.quantidade,
                     ondeId: ctx.jogador.entidade.id
                 });
                 return "Pegou.";
@@ -39,7 +40,7 @@ export abstract class ItemBase {
         }
 
         return {
-            "$DESCRICAO": async () => await this.descricao(ctx),
+            [Acao.$Descricao]: async () => await this.descricao(ctx),
             ...acoes,
             ...(await this.acoes(ctx, extra))
         };

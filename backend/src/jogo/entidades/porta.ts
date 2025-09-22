@@ -1,6 +1,5 @@
 import type { Contexto } from "../contexto.ts";
-import type { ItemBase } from "../itens/base.ts";
-import type { AcoesCallbackResult } from "../salas/base.ts";
+import type { AcaoExtraPopulado, AcoesCallbackResult } from "../salas/base.ts";
 import type { Estado, MaybePromise } from "../types.ts";
 import { EntidadeBase } from "./base.ts";
 
@@ -16,7 +15,7 @@ export class EntidadePorta extends EntidadeBase {
         }
     }
 
-    async _acoes(ctx: Contexto, extra?: Estado | null): Promise<AcoesCallbackResult> {
+    async _acoes(ctx: Contexto, extra?: AcaoExtraPopulado | null): Promise<AcoesCallbackResult> {
         if(this.estaAberto()) {
             return {
                 "FECHAR": async () => this.fechar(ctx),

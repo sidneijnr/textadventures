@@ -141,9 +141,9 @@ export const fetchClient = {
     logout: () => doFetchApi<void>("post", "/auth/logout"),
     
     salaOlhar: () => doFetchApi<{ sala: RespostaSala } & RespostaSituacao>("get", "/sala/olhar"),
-    salaMover: (acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/sala/acao", { body: { acao, extra } }),
-    itemAcao: (item: string, acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/item/acao", { body: { item, acao, extra } }),
-    entidadeAcao: (entidade: string, acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/entidade/acao", { body: { entidade, acao, extra } }),
+    salaMover: (acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/sala/{acao}", { params: { acao }, body: extra }),
+    itemAcao: (item: string, acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/item/{id}/{acao}", { params: { id: item, acao }, body: extra }),
+    entidadeAcao: (entidade: string, acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/entidade/{id}/{acao}", { params: { id: entidade, acao }, body: extra }),
 };
 
 // */

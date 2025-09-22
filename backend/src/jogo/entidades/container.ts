@@ -1,6 +1,5 @@
 import type { Contexto } from "../contexto.ts";
-import type { ItemBase } from "../itens/base.ts";
-import type { AcoesCallbackResult } from "../salas/base.ts";
+import type { AcaoExtraPopulado, AcoesCallbackResult } from "../salas/base.ts";
 import type { Estado, MaybePromise } from "../types.ts";
 import { EntidadeBase } from "./base.ts";
 
@@ -16,10 +15,24 @@ class Bau extends EntidadeBase {
         }
     }
 
-    async _acoes(ctx: Contexto, extra?: Estado | null): Promise<AcoesCallbackResult> {
+    async _acoes(ctx: Contexto, extra?: AcaoExtraPopulado | null): Promise<AcoesCallbackResult> {
         if(this.estaAberto()) {
             return {
                 "FECHAR": async () => this.fechar(ctx),
+                "COLOCAR": async () => {
+                    const item = extra?.item;
+                    if(!item) {
+                        return "Deve especificar o que quer colocar no baú.";
+                    }
+                    if(!(item.onde instanceof EntidadeBase && item.onde.entidade.id === ctx.jogador.entidade.id)) {
+                        return "Você não tem esse item.";
+                    }
+                    await ctx.moverItem(item, { 
+                        quantidade: extra?.quantidade || item.item.quantidade,
+                        ondeId: this.entidade.id
+                    });
+                    return "Colocou no baú.";
+                },
                 ...(await super._acoes(ctx, extra)),
             };
         } else {

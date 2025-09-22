@@ -13,6 +13,8 @@ export const tableEntidades = pgTable('entidades', {
 
     tipo: varchar('tipo', { length: 255 }).notNull(), // é o tipo da entidade (ex: "JOGADOR", "BAU", etc)
 
+    nome: varchar('nome', { length: 255 }), // Nome da entidade usado internamente, só usado quando necessário
+
     // Onde a entidade está atualmente, se onde ele está for deletado, ela também será deletada (onDelete cascade)
     ondeId: uuid('onde_id').references(() => tableLocais.id, { onDelete: 'cascade' }).notNull(),
 

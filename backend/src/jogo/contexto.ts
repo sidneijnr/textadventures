@@ -4,7 +4,7 @@ import { gerarPilhaId, getEntidadeConfig, getItemConfig, getSalaConfig } from ".
 
 import { SalaRepository } from "../repositories/salaRepository.ts";
 import type { EntidadeJogador } from "./entidades/jogador.ts";
-import type { SalaBase, SalaBaseStatic } from "./salas/base.ts";
+import type { AcoesCallbackResult, SalaBase, SalaBaseStatic } from "./salas/base.ts";
 import type { ItemBase, ItemBaseStatic } from "./itens/base.ts";
 import type { EntidadeBase } from "./entidades/base.ts";
 import { EntidadeRepository } from "../repositories/entidadeRepository.ts";
@@ -14,87 +14,15 @@ import { execArrowOrValue, type Estado } from "./types.ts";
 import { ItemRepository } from "../repositories/itemRepository.ts";
 import type { Entidade } from "../db/entidadeSchema.ts";
 import e from "express";
+import { Acao } from "./comandos/comandoConfig.ts";
 
 // Serve como service que interage com o banco de dados, e guarda o estado atual do jogo
 export class Contexto {
-    /*jogador: Entidade;
-
-    mochila: Item[] | null = null;
-    async getMochila() {
-        if(this.mochila) return this.mochila;
-
-        this.mochila = await ItemRepository.listarPorLocal(db, this.jogador.id);
-        return this.mochila;
-    }
-
-    itensNoChao: Item[] | null = null;
-    async getItensNoChao(nome?: SalaNome) {
-        if(!nome) {
-            if(this.itensNoChao) return this.itensNoChao;
-
-            const sala = await this.getSala();
-            this.itensNoChao = await ItemRepository.listarPorLocal(db, sala.id);
-            return this.itensNoChao;
-        } else {
-            const sala = await SalaRepository.getSalaByNome(db, nome);
-            if (!sala) {
-                throw new Error("Sala não existe! "+ nome);
-            }
-            return await ItemRepository.listarPorLocal(db, sala.id);
-        }
-    }
-
-    entidadesNaSala: (Entidade & {mochila: Item[]})[] | null = null;
-    async getEntidadesNaSala() {
-        if(this.entidadesNaSala) return this.entidadesNaSala;
-
-        const sala = await this.getSala();
-        this.entidadesNaSala = (await EntidadeRepository.naSala(db, sala.id)).filter(e => e.id !== this.jogador.id);
-        return this.entidadesNaSala;
-    }
-
-    global: Sala;
-
-    sala: Sala | null;
-    async getSala() {
-        if(this.sala) return this.sala;
-        
-        this.sala = await SalaRepository.getSalaById(db, this.jogador.ondeId);
-        if (!this.sala) {
-            throw new Error("Sala para onde o jogador tentou ir não existe!");
-        }
-
-        return this.sala;
-    }*/
-
     jogador: EntidadeJogador;
     sala: SalaBase;
     global: SalaBase;
 
     private str: string;
-
-    /*constructor({ jogador, sala, global, itensNoChao, mochila, entidadesNaSala }: {
-        jogador: Entidade,
-        sala: Sala | null,
-        global: Sala,
-        itensNoChao: Item[] | null,
-        mochila: Item[] | null,
-        entidadesNaSala: (Entidade & {mochila: Item[]})[] | null,
-    }) {
-        this.jogador = jogador;
-        this.global = global;
-        this.sala = sala;
-        this.str = "";
-        this.itensNoChao = itensNoChao;
-        this.mochila = mochila;
-        this.entidadesNaSala = entidadesNaSala;
-    }
-
-    static async carregar(username: string): Promise<Contexto> {
-        const result = await SalaRepository.dadosIniciaisJogador(db, username);
-        return new Contexto(result);
-    }*/
-
     constructor({ sala, global, jogador }: {
         sala: SalaBase,
         global: SalaBase,
@@ -158,11 +86,68 @@ export class Contexto {
         };
     }
 
+    getEntidadeVisivel(entidadeId: string): EntidadeBase | undefined {
+        // 1 Filhos na mochila (Não implementado sempre vazio...)
+        const { filhos } = this.jogador.getFilhosVisiveis();
+        let achouEntidade = filhos.find(i => i.entidade.id === entidadeId);
+        
+        // 2. Na sala
+        if(!achouEntidade && this.sala.estaVisivel()) {
+            const { entidades } = this.sala.getFilhosVisiveis();
+            achouEntidade = entidades.find(i => i.entidade.id === entidadeId);
+            // 2.1 Filhos da entidade (Não implementado sempre vazio...)
+            if(!achouEntidade) {
+                for(let entidade of entidades) {
+                    if(!entidade.estaVisivel()) continue;
+
+                    const { filhos: entidadeFilhos } = entidade.getFilhosVisiveis();
+                    achouEntidade = entidadeFilhos.find(i => i.entidade.id === entidadeId);
+                    if(achouEntidade) break;
+                }
+            }
+        }
+
+        return achouEntidade;
+    }
+
+    getItemVisivel(itemId: string): ItemBase | undefined {
+        // 1. Mochila
+        const { itens: mochila, filhos } = this.jogador.getFilhosVisiveis();
+        let achouObjeto = mochila.find(i => i.item.id === itemId);
+        // 1.1 Filhos na mochila
+        if(!achouObjeto) {
+            for(let filho of filhos) {
+                if(!filho.estaVisivel()) continue;
+
+                const { itens: mochilaFilho } = filho.getFilhosVisiveis();
+                achouObjeto = mochilaFilho.find(i => i.item.id === itemId);
+                if(achouObjeto) break;
+            }
+        }
+        // 2. Chão da sala
+        if(!achouObjeto && this.sala.estaVisivel()) {
+            const { itens: itensChao, entidades } = this.sala.getFilhosVisiveis();
+            achouObjeto = itensChao.find(i => i.item.id === itemId);
+            // 2.1 Filhos no chão
+            if(!achouObjeto) {
+                for(let entidade of entidades) {
+                    if(!entidade.estaVisivel()) continue;
+                    
+                    const { itens: itensEntidade } = entidade.getFilhosVisiveis();
+                    achouObjeto = itensEntidade.find(i => i.item.id === itemId);
+                    if(achouObjeto) break;
+                }
+            }
+        }
+        
+        return achouObjeto;
+    }
+
     async _descricaoItens(itens: ItemBase[]) {
         const descricaoItens = [];
         for(let i of itens) {
             const acoes = await i._acoes(this);
-            const descr = "$DESCRICAO" in acoes ? await execArrowOrValue(acoes["$DESCRICAO"]) : "";
+            const descr = Acao.$Descricao in acoes ? await execArrowOrValue(acoes[Acao.$Descricao]) : "";
             if(descr && typeof descr === "string") {
                 this.escrevaln(descr);
             }            
@@ -184,7 +169,7 @@ export class Contexto {
         const descricaoEntidades = [];
         for(let e of entidades) {
             const acoes = await e._acoes(this);
-            const descr = "$DESCRICAO" in acoes ? await execArrowOrValue(acoes["$DESCRICAO"]) : "";
+            const descr = Acao.$Descricao in acoes ? await execArrowOrValue(acoes[Acao.$Descricao]) : "";
             if(descr && typeof descr === "string") {
                 this.escrevaln(descr);
             }            
@@ -212,39 +197,16 @@ export class Contexto {
 
         const [descricaoJogador] = await this._descricaoEntidades([this.jogador]);
         
-        /*const temLuz = this.sala.temLuz();
-        if(!temLuz) {
-            this.escrevaln("Está muito escuro, você não consegue ver nada.");
-            const descricaoSala = this.obterTexto();
-            
-            return {
-                resposta: resposta,
-                jogador: {
-                    ...descricaoJogador,
-                    ondeId: this.jogador.entidade.ondeId,
-                },
-                sala: {
-                    id: this.sala.sala.id,
-                    nome: this.sala.sala.nome,
-                    atualizadoEm: this.sala.sala.atualizadoEm,
-                    conexoes: [],
-                    descricao: descricaoSala,
-                    itens: [],
-                    entidades: [],
-                }
-            };
-        }*/
-
         let descricaoSala = "";
         let descricaoItensNochao;
         let descricaoEntidades;
-        let acoes = {};
+        let acoes: AcoesCallbackResult = {};
         if(!this.sala.estaVisivel()) {
             this.escrevaln("Está muito escuro, você não consegue ver nada.");
             descricaoSala = this.obterTexto();
         } else {
             acoes = await this.sala._acoes(this);
-            const descr = "$DESCRICAO" in acoes ? await execArrowOrValue(acoes["$DESCRICAO"]) : "";
+            const descr = Acao.$Descricao in acoes ? await execArrowOrValue(acoes[Acao.$Descricao]) : "";
             if(descr && typeof descr === "string") {
                 this.escrevaln(descr);
             }
@@ -286,8 +248,7 @@ export class Contexto {
         this.sala = info.sala;
         this.global = info.global;
         this.jogador = info.jogador;
-    }
-    
+    }    
     
     async moverItem(i: ItemBase, { quantidade, ondeId, estado }: { 
         quantidade: number,

@@ -5,7 +5,6 @@ import { type Sala, tableSalas } from "./salaSchema.ts";
 import { type Item, tableItens } from "./itemSchema.ts";
 import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { _salas, gerarPilhaId, getSalaConfig } from "../jogo/config.ts";
-import type { ItemBase, ItemBaseStatic } from "../jogo/itens/base.ts";
 import { tableEntidades } from "./entidadeSchema.ts";
 import type { EntidadeInicial } from "../jogo/entidades/base.ts";
 
@@ -67,6 +66,7 @@ try {
         insertEntidades.push({
             id: entidadeId,
             tipo: entidade.nome,
+            nome: entidadeInfo.nome || null,
             ondeId: salaId,
             estado: estadoInicial,
             refId: refId || null,

@@ -3,7 +3,6 @@ import type { DatabaseType } from "../db/drizzle.ts";
 import { tableUsers, type User } from "../db/userSchema.ts";
 import { tableEntidades } from "../db/entidadeSchema.ts";
 import { tableSalas } from "../db/salaSchema.ts";
-import { salaasInicio } from "../jogo/salas/inicio.ts";
 
 export class UserRepository {
     static async buscarUsername(db: DatabaseType, username: string) {
@@ -24,7 +23,7 @@ export class UserRepository {
 
             const [salaInicial] = await tx.select()
                 .from(tableSalas)
-                .where(eq(tableSalas.nome, salaasInicio.Inicio.nome));
+                .where(eq(tableSalas.nome, "Inicio"));
 
             const resultEntity = await tx.insert(tableEntidades).values({
                 username: dados.username,

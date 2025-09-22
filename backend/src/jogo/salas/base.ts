@@ -1,5 +1,6 @@
 import type { Sala } from "../../db/salaSchema.ts";
-import type { AcaoValue } from "../comandos/comandoConfig.ts";
+import type { AcaoExtra } from "../../docs/schemas.ts";
+import { Acao, type AcaoValue } from "../comandos/comandoConfig.ts";
 import type { Contexto } from "../contexto.ts";
 import type { EntidadeBase, EntidadeBaseStatic, EntidadeInicial } from "../entidades/base.ts";
 import type { ItemBase, ItemBaseStatic } from "../itens/base.ts";
@@ -22,16 +23,21 @@ export type AcoesCallbackResult = {
     [acao in AcaoValue]?: ArrowOrValue<typeof SalaBase & SalaBaseStatic | string | void>;
 };
 
+export type AcaoExtraPopulado = Omit<AcaoExtra, "item" | "entidade"> & {
+    item?: ItemBase;
+    entidade?: EntidadeBase;
+};
+
 export abstract class SalaBase {    
     descricao(ctx: Contexto): MaybePromise<string | void> {
         return;
     }
-    acoes(ctx: Contexto, extra?: Estado | null): MaybePromise<AcoesCallbackResult> {
+    acoes(ctx: Contexto, extra?: AcaoExtraPopulado | null): MaybePromise<AcoesCallbackResult> {
         return {};
     }
-    async _acoes(ctx: Contexto, extra?: Estado | null): Promise<AcoesCallbackResult> {
+    async _acoes(ctx: Contexto, extra?: AcaoExtraPopulado | null): Promise<AcoesCallbackResult> {
         return {
-            "$DESCRICAO": async () => await this.descricao(ctx),
+            [Acao.$Descricao]: async () => await this.descricao(ctx),
             ...(await this.acoes(ctx, extra))
         };
     }
@@ -50,8 +56,8 @@ export abstract class SalaBase {
         return this.itens.filter(i => i.item.nome === item.nome);
     }
 
-    obterEntidadePorNome<T extends typeof EntidadeBase>(entidade: T & EntidadeBaseStatic): InstanceType<T>[] {
-        return this.entidades.filter(e => e.entidade.tipo === entidade.nome) as InstanceType<T>[];
+    obterEntidadePorNome<T extends typeof EntidadeBase>(entidade: T & EntidadeBaseStatic, nome?: string | null): InstanceType<T>[] {
+        return this.entidades.filter(e => e.entidade.tipo === entidade.nome && e.entidade.nome === (nome || null)) as InstanceType<T>[];
     }
 
     temLuz(): boolean {

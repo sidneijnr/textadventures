@@ -19,6 +19,8 @@ export const Acao = {
 
     Abrir: "ABRIR",
     Fechar: "FECHAR",
+    Acender: "ACENDER",
+    Apagar: "APAGAR",
     Ligar: "LIGAR",
     Desligar: "DESLIGAR",
     Mover: "MOVER",
@@ -60,6 +62,7 @@ export const Acao = {
     Usar: "USAR",
     Chao: "CHAO"
 } as const;
+export type AcaoValue = typeof Acao[keyof typeof Acao];
 
 export const acoesConfig = {
     [Acao.N]: { sinonimos: ["N", "NORTE"], args: 0 },
@@ -82,8 +85,10 @@ export const acoesConfig = {
 
     [Acao.Abrir]: { sinonimos: ["ABRIR", "ABRIR"], args: 1 },
     [Acao.Fechar]: { sinonimos: ["FECHAR", "FECHAR"], args: 1 },
-    [Acao.Ligar]: { sinonimos: ["LIGAR", "ACENDER", "LIGAR"], args: 1 },
-    [Acao.Desligar]: { sinonimos: ["DESLIGAR", "APAGAR", "DESLIGAR"], args: 1 },
+    [Acao.Acender]: { sinonimos: ["ACENDER"], args: 1 },
+    [Acao.Apagar]: { sinonimos: ["APAGAR"], args: 1 },
+    [Acao.Ligar]: { sinonimos: ["LIGAR"], args: 1 },
+    [Acao.Desligar]: { sinonimos: ["DESLIGAR"], args: 1 },
     [Acao.Mover]: { sinonimos: ["MOVER", "PUXAR", "FOLHEAR", "REMOVER", "MEXER", "RETIRAR", "ARRASTAR", "DESLOCAR", "APROXIMAR", "BALANCAR", "DESENCAIXAR", "OSCILAR"], args: 1 },
     [Acao.Empurrar]: { sinonimos: ["EMPURRAR", "FORCAR", "IMPULSIONAR", "IMPELIR", "AFASTAR"], args: 1 },
     [Acao.Comer]: { sinonimos: ["COMER", "DEVORAR", "PROVAR", "MASTIGAR", "ENGOLIR"], args: 1 },

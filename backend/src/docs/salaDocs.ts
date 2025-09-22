@@ -9,52 +9,22 @@ export const salaDocs = {
             summary: "Descreve a sala atual",
             description: "Retorna a descrição completa da sala onde o jogador se encontra, incluindo saídas, itens no chão e outras entidades visíveis.",
             schema: {
-                response: respostaSituacao.extend({
-                    sala: z.object({
-                        id: z.string().meta({ example: "Inicio" }),
-                        localId: z.uuid().meta({ example: "UUID" }),
-                        descricao: z.string().meta({
-                            example: "Você está em uma sala iluminada. Há uma porta ao norte e uma janela ao sul.",
-                        }),
-                        conexoes: z.array(z.string()).meta({
-                            example: ["N", "S"],
-                        }),
-                        atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-                        itens: z.array(z.object({
-                            id: z.uuid().meta({ example: "UUID" }),
-                            tipo: z.string().meta({ example: "pedra" }),
-                            quantidade: z.number().meta({ example: 1 }),
-                            descricao: z.string().meta({ example: "Uma pedra comum." }),
-                            atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-                        })),
-                        entidades: z.array(z.object({
-                            id: z.uuid().meta({ example: "UUID" }),
-                            localId: z.uuid().meta({ example: "UUID" }),
-                            tipo: z.string().meta({ example: "JOGADOR" }),
-                            username: z.string().meta({ example: "usuario123" }),
-                            atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-                            descricao: z.string().meta({ example: "" }),
-                        })).optional(),
-                    }),
-                    resposta: z.string().meta({
-                        example: "Está tudo escuro aqui.",
-                    }),
-                })
+                response: respostaSituacao
             }
         }
     },
-    "/sala/acao": {
+    "/sala/{acao}": {
         post: {
             summary: "Faz uma ação na sala",
-            description: "Tenta mover o jogador para uma sala adjacente na direção especificada (ex: norte, sul, leste, oeste).",
+            description: "Tenta mover o jogador para uma sala adjacente na direção especificada (ex: n, s, l, o).",
             schema: {
-                body: z.object({
-                    acao: z.enum(Acao).meta({
-                        description: "Direção para a qual se mover ou uma ação",
-                        example: "N",
-                    }),
-                    extra: acaoExtraSchema.optional()
+                params: z.object({
+                    acao: z.preprocess((s) => typeof s === "string" ? s.toUpperCase() : s, z.enum(Acao).meta({
+                        description: "Ação a ser realizada",
+                        example: "n",
+                    })),
                 }),
+                body: acaoExtraSchema.optional(),
                 response: respostaSituacao
             }
         }

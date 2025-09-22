@@ -5,7 +5,6 @@ export interface EstadoItem {
 export type Estado = Record<string, EstadoItem | EstadoItem[] | string | number | boolean | null>;
 
 export type MaybePromise<T> = T | Promise<T>;
-//export type CallbackOrValue<T> = T | ((ctx: any, extra?: Estado | null) => MaybePromise<T>);
 
 export type ArrowOrValue<T> = T | (() => MaybePromise<T>);
 

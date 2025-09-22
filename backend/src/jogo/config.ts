@@ -1,40 +1,18 @@
 import type { Entidade } from "../db/entidadeSchema.ts";
 import type { Item } from "../db/itemSchema.ts";
 import type { Sala } from "../db/salaSchema.ts";
-import type { Contexto } from "./contexto.ts";
 import type { EntidadeBase, EntidadeBaseStatic } from "./entidades/base.ts";
+import type { Estado } from "./types.ts";
+import type { ItemBase, ItemBaseStatic } from "./itens/base.ts";
+
 import { entidadesContainer } from "./entidades/container.ts";
 import { EntidadeJogador } from "./entidades/jogador.ts";
 import * as entidadesPorta from "./entidades/porta.ts";
-import type { ItemBase, ItemBaseStatic } from "./itens/base.ts";
+
 import { itensPadrao } from "./itens/inicio.ts";
+
 import { SalaBase, SalaGlobal, type SalaBaseStatic } from "./salas/base.ts";
 import { entidadesInicio, salaasInicio } from "./salas/inicio.ts";
-import type { ArrowOrValue, Estado, MaybePromise } from "./types.ts";
-
-/*const _itens: (typeof ItemBase & ItemBaseStatic)[] = [
-    ...Object.values(itensPadrao)
-];
-
-console.log("Testando Itens:");
-for(let classe of _itens) {
-    console.log("Nome:", classe.nome);
-    console.log("Estado:", classe.estadoInicial?.());
-    console.log();
-}
-
-// Garante que Todas as classes implementam SalaBaseStatic
-const _salas: (typeof SalaBase & SalaBaseStatic)[] = [
-    ...Object.values(salaasInicio)
-];
-
-console.log("Testando Salas:");
-for(let classe of _salas) {
-    console.log("Nome:", classe.nome);
-    console.log("Itens:", classe.itensIniciais?.());
-    console.log("Estado:", classe.estadoInicial?.());
-    console.log();
-}*/
 
 const _itensArray: (typeof ItemBase & ItemBaseStatic)[] = [
     ...Object.values(itensPadrao)
@@ -64,51 +42,6 @@ for(let classe of _entidadesArray) {
     _entidades.set(classe.nome, classe);
 }
 
-/*
-const _itens = {
-    ...itensInicio,
-} as const;
-
-const _salas = {
-    ...salasInicio,
-    Global: {
-        descricao: () => "Lógica global que afeta todas as salas. Impossível de acessar diretamente.",
-        conexoes: {},
-        estadoInicial: {}
-    }
-} as const;
-
-export type ItemType<ITEM = string> = {
-    descricao: CallbackOrValue<string | void, Item>;
-    acoes?: CallbackOrValue<{ 
-        [acao: string]: CallbackOrValue<string | void, Item>;
-    }, Item>;
-    itensIniciais?: {
-        nome: ITEM;
-        quantidade: number;
-        estadoInicial?: Estado;
-    }[];
-};
-
-export type SalaType<SALA = string, ITEM = string> = {
-    descricao: CallbackOrValue<string | void, Sala>;
-    conexoes?: CallbackOrValue<{ 
-        [direcao: string]: CallbackOrValue<SALA | void, Sala>;
-    }, Sala>;
-    acoes?: CallbackOrValue<{ 
-        [acao: string]: CallbackOrValue<string | void, Sala>;
-    }, Sala>;
-    itensIniciais?: readonly {
-        nome: ITEM | string;
-        quantidade: number;
-        estadoInicial?: Estado;
-    }[];
-    estadoInicial?: Estado;
-};*/
-
-
-/*export type ItemTipo = keyof typeof _itens;
-export const itens: Record<ItemTipo, ArrowOrValue<ItemType<ItemTipo>>> = _itens;*/
 export const getItemConfig = <T extends ItemBase = ItemBase>(itemTipo: string, info: {
     item: Item;
     onde: SalaBase | EntidadeBase;
@@ -120,8 +53,6 @@ export const getItemConfig = <T extends ItemBase = ItemBase>(itemTipo: string, i
     return (new (itemConfig as any)(info)) as T;
 }
 
-/*export type SalaNome = keyof typeof _salas;
-export const salas: Record<SalaNome, ArrowOrValue<SalaType<SalaNome, ItemTipo>>> = _salas;*/
 export const getSalaConfig = <T extends SalaBase = SalaBase>(salaNome: string, info: {
     sala: Sala;
     itens?: ItemBase[];

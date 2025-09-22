@@ -1,16 +1,17 @@
 import type { Entidade } from "../../db/entidadeSchema.ts";
-import type { Item } from "../../db/itemSchema.ts";
+import { Acao } from "../comandos/comandoConfig.ts";
 import type { Contexto } from "../contexto.ts";
 import type { ItemBase, ItemBaseStatic } from "../itens/base.ts";
-import { SalaBase, type AcoesCallbackResult, type ItemInicial, type SalaBaseStatic } from "../salas/base.ts";
-import type { ArrowOrValue, Estado, MaybePromise } from "../types.ts";
+import { SalaBase, type AcaoExtraPopulado, type AcoesCallbackResult, type ItemInicial, type SalaBaseStatic } from "../salas/base.ts";
+import type { Estado, MaybePromise } from "../types.ts";
 
 export type EntidadeInicial = {
     entidade: typeof EntidadeBase & EntidadeBaseStatic;
+    nome?: string; // Nome único da entidade, só usado quando necessário
     itensIniciais?: ItemInicial[];
     filhosIniciais?: EntidadeInicial[];
     estadoInicial?: Estado;
-    ref?: { sala: typeof SalaBase & SalaBaseStatic }; // Quando for entidade ref. Procura a entidade do tipo na sala indicada.
+    ref?: { sala: typeof SalaBase & SalaBaseStatic, nome: string }; // Quando for entidade ref. Procura a entidade do tipo e nome na sala indicada.
 };
 
 export interface EntidadeBaseStatic {
@@ -24,12 +25,12 @@ export abstract class EntidadeBase {
     descricao(ctx: Contexto): MaybePromise<string | void> {
         return `um ${this.entidade.tipo.toLowerCase()}`;
     }
-    acoes(ctx: Contexto, extra?: Estado | null): MaybePromise<AcoesCallbackResult> {
+    acoes(ctx: Contexto, extra?: AcaoExtraPopulado | null): MaybePromise<AcoesCallbackResult> {
         return {};
     }
-    async _acoes(ctx: Contexto, extra?: Estado | null): Promise<AcoesCallbackResult> {
+    async _acoes(ctx: Contexto, extra?: AcaoExtraPopulado | null): Promise<AcoesCallbackResult> {
         return {
-            "$DESCRICAO": async () => await this.descricao(ctx),
+            [Acao.$Descricao]: async () => await this.descricao(ctx),
             ...(await this.acoes(ctx, extra))
         };
     }

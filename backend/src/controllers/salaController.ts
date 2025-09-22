@@ -2,7 +2,7 @@ import { type RequestHandler } from "express";
 import { salaDocs } from "../docs/salaDocs.ts";
 import { ControllerBase } from "./ControllerBase.ts";
 import { execArrowOrValue } from "../jogo/types.ts";
-import { SalaBase, type SalaBaseStatic } from "../jogo/salas/base.ts";
+import type { SalaBase, AcaoExtraPopulado, SalaBaseStatic } from "../jogo/salas/base.ts";
 
 export class SalaController extends ControllerBase {
     static descreverSalaAtual: RequestHandler = async (req, res) => {
@@ -12,14 +12,24 @@ export class SalaController extends ControllerBase {
     }
 
     static executarAcao: RequestHandler = async (req, res) => {
-        const { ctx, body } = await this.loadRequest(salaDocs["/sala/acao"].post.schema, req, res);
+        const { ctx, body, params } = await this.loadRequest(salaDocs["/sala/{acao}"].post.schema, req, res);
 
         const sala = ctx.sala;
-        const acoes = await sala._acoes(ctx, body.extra ?? null);
-        if(!(body.acao in acoes) || body.acao.startsWith("$")) {
+
+        const { item, entidade, ..._extra} = body || {};
+        const extra: AcaoExtraPopulado = _extra;
+        if(item) {
+            extra.item = ctx.getItemVisivel(item) || undefined;
+        }
+        if(entidade) {
+            extra.entidade = ctx.getEntidadeVisivel(entidade) || undefined;
+        }
+
+        const acoes = await sala._acoes(ctx, extra ?? null);
+        if(!(params.acao in acoes) || params.acao.startsWith("$")) {
             ctx.escrevaln("Você não pode fazer isso.");
         } else {
-            const result = await execArrowOrValue(acoes[body.acao]);
+            const result = await execArrowOrValue(acoes[params.acao]);
             if(result) {
                 if(typeof result !== "string") {
                     await ctx.moverParaSala(result as typeof SalaBase & SalaBaseStatic);

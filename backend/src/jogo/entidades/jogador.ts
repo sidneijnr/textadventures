@@ -1,5 +1,6 @@
 import type { Contexto } from "../contexto.ts";
 import type { ItemBase } from "../itens/base.ts";
+import type { AcaoExtraPopulado, AcoesCallbackResult } from "../salas/base.ts";
 import { EntidadeBase } from "./base.ts";
 
 export class EntidadeJogador extends EntidadeBase {
@@ -12,6 +13,29 @@ export class EntidadeJogador extends EntidadeBase {
             return "Você mesmo.";
         } else {
             return this.entidade.username || "um jogador";
+        }
+    }
+
+    acoes(ctx: Contexto, extra?: AcaoExtraPopulado | null): AcoesCallbackResult {
+        if(this.outroJogador) {
+            return {
+                "DAR": async () => {
+                    const item = extra?.item;
+                    if(!item) {
+                        return "Deve especificar o que quer dar.";
+                    }
+                    if(!(item.onde instanceof EntidadeBase && item.onde.entidade.id === ctx.jogador.entidade.id)) {
+                        return "Você não tem esse item.";
+                    }
+                    await ctx.moverItem(item, { 
+                        quantidade: extra?.quantidade || item.item.quantidade,
+                        ondeId: this.entidade.id
+                    });
+                    return "Você entrega o item.";
+                }
+            };
+        } else {
+            return {};
         }
     }
 

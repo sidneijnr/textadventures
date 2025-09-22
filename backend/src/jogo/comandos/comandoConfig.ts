@@ -20,6 +20,8 @@ export const Acao = {
 
     Abrir: "ABRIR",
     Fechar: "FECHAR",
+    Acender: "ACENDER",
+    Apagar: "APAGAR",
     Ligar: "LIGAR",
     Desligar: "DESLIGAR",
     Mover: "MOVER",
