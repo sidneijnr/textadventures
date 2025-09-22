@@ -27,6 +27,7 @@ export class UserRepository {
                 .where(eq(tableSalas.nome, "Inicio"));
 
             const resultEntity = await tx.insert(tableEntidades).values({
+                nome: dados.username,
                 username: dados.username,
                 tipo: "JOGADOR",
                 ondeId: salaInicial.id,
