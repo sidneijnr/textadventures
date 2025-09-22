@@ -4,6 +4,7 @@ import { UserRepository } from "../repositories/userRepository.ts";
 import { db } from "../db/drizzle.ts";
 import bcrypt from "bcryptjs";
 import { RevokeSessionError } from "../middlewares/authMiddleware.ts";
+import type { User } from "../db/userSchema.ts";
 
 // Autenticação simples usando nome de usuário e senha
 export class AuthController {
@@ -63,5 +64,21 @@ export class AuthController {
 
     static logout: RequestHandler = async (req, res) => {
         throw new RevokeSessionError("OK");
+    }
+
+    static info: RequestHandler = async (req, res) => {
+        const usuario = req.session! as User;
+        
+        const result = await UserRepository.jogoInfo(db, usuario.username);
+        if(!result || !result.usuario || !result.entidade) {
+            throw new RevokeSessionError("BANIDO!");
+        }
+
+        res.status(200).json({
+            usuario: result.usuario,
+            jogador: result.entidade,
+            usuariosCadastrados: result.usuariosCadastrados,
+            usuariosOnline: result.usuariosOnline
+        });
     }
 }

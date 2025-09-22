@@ -1,17 +1,17 @@
 import { type RequestHandler } from "express";
-import { itemDocs } from "../docs/itemDocs.ts";
 import { ControllerBase } from "./ControllerBase.ts";
 import { execArrowOrValue } from "../jogo/types.ts";
+import { entidadeDocs } from "../docs/entidadeDocs.ts";
 import type { AcaoExtraPopulado, SalaBase, SalaBaseStatic } from "../jogo/salas/base.ts";
 
-export class ItemController extends ControllerBase {
-    static acaoItem: RequestHandler = async (req, res) => {
-        const { ctx, body, params } = await this.loadRequest(itemDocs["/sala/{salaId}/item/{id}/{acao}"].post.schema, req, res);
-        const itemId = params.id;
-
-        const achouObjeto = ctx.getItemVisivel(itemId);
+export class EntidadeController extends ControllerBase {
+    static acaoEntidade: RequestHandler = async (req, res) => {
+        const { ctx, body, params } = await this.loadRequest(entidadeDocs["/sala/{salaId}/entidade/{id}/{acao}"].post.schema, req, res);
+        const entidadeId = params.id;
         
-        if(!achouObjeto) {
+        const achouEntidade = ctx.getEntidadeVisivel(entidadeId);
+
+        if(!achouEntidade) {
             ctx.escrevaln("Não tem isso aqui.");
             await this.sendResponse(ctx, req, res);
             return;
@@ -26,7 +26,8 @@ export class ItemController extends ControllerBase {
             extra.entidade = ctx.getEntidadeVisivel(entidade) || undefined;
         }
 
-        const acoes = await achouObjeto._acoes(ctx, extra ?? null);
+        //const acoes = await execCallbackOrValue(itemConfig.acoes ?? {}, ctx, achouObjeto, body.extra ?? null);
+        const acoes = await achouEntidade._acoes(ctx, extra ?? null);
         if(!(params.acao in acoes) || params.acao.startsWith("$")) {
             ctx.escrevaln("Você não pode fazer isso.");
         } else {

@@ -16,16 +16,11 @@ export class ProcedureResetarItensChao {
             -- 1. Restaura itens que são spawn (quantidade_inicial) para sua quantidade inicial
             UPDATE itens
             SET quantidade = quantidade_inicial, atualizado_em = NOW()
-            WHERE quantidade_inicial IS NOT NULL AND quantidade <> quantidade_inicial AND atualizado_em < NOW() - INTERVAL '2 minutes';
+            WHERE quantidade_inicial IS NOT NULL AND quantidade <> quantidade_inicial;
 
-            -- 2. Remove itens que estão no chão há mais de 2 minutos sem atualização, ou que zeraram sua quantidade
+            -- 2. Remove itens que estão no chão há mais de 10 minutos sem atualização, ou que zeraram sua quantidade
             DELETE FROM itens WHERE quantidade_inicial IS NULL AND (
-                atualizado_em < NOW() - INTERVAL '2 minutes'
-                AND id IN (
-                    SELECT itens.id
-                    FROM itens
-                    INNER JOIN salas ON itens.onde_id = salas.id
-                )
+                atualizado_em < NOW() - INTERVAL '10 minutes' AND seguro = FALSE
                 OR quantidade < 1
             );
 

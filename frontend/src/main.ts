@@ -240,10 +240,10 @@ addCommand("ajuda", {
 });
 
 try {
-    const { resposta, sala, jogador } = await fetchClient.salaOlhar();
-    termPrint("Olá novamente", jogador.username);
+    const info = await fetchClient.info();
+    termPrint("Olá novamente", info.jogador.username);
     
-    await principal();
+    await principal(info);
 } catch(e) {
     console.error(e);
     termPrint("Parece que você não está logado.");

@@ -6,17 +6,18 @@ import { type Item, tableItens, tableLocais } from "../db/itemSchema.ts";
 import { type DatabaseType } from "../db/drizzle.ts";
 import { RevokeSessionError } from "../middlewares/authMiddleware.ts";
 import { mapArrayWithTable } from "../db/utils.ts";
-import type { SalaNome } from "../jogo/config.ts";
 import type { Estado } from "../jogo/types.ts";
+import { SalaGlobal } from "../jogo/salas/base.ts";
 
 export class SalaRepository {
     static async dadosIniciaisJogador(db: DatabaseType, username: string) {
+        // A FAZER: tirar essa consulta, deixa o front informar que sala o usuário está, erro se não estiver lá. Outra rota pega dados do usuário
         const jogadorResult = await db.select({
             ondeId: tableEntidades.ondeId,
             global: tableSalas
         })
         .from(tableEntidades)
-        .leftJoin(tableSalas, eq(tableSalas.nome, "Global"))
+        .leftJoin(tableSalas, eq(tableSalas.nome, SalaGlobal.nome))
         .where(eq(tableEntidades.username, username))
         .limit(1);
 
@@ -25,6 +26,10 @@ export class SalaRepository {
         }
         const { ondeId, global } = jogadorResult[0];
 
+        return { ondeId, global };
+    }
+
+    static async carregarSalaCompleta(db: DatabaseType, ondeId: string) {
         const result = await db.query.tableSalas.findFirst({
             where: eq(tableSalas.id, ondeId),
             with: {
@@ -35,6 +40,13 @@ export class SalaRepository {
                     with: {
                         mochila: {
                             where: gte(tableItens.quantidade, 1)
+                        },
+                        entidadeRef: {
+                            with: {
+                                mochila: {
+                                    where: gte(tableItens.quantidade, 1)
+                                }
+                            }
                         }
                     }
                 }
@@ -46,21 +58,8 @@ export class SalaRepository {
         }
 
         const { itens, entidades, ...sala } = result;
-        
-        const index = entidades.findIndex(e => e.username === username);
-        if(index < 0 ) {
-            throw new RevokeSessionError("Jogador não está na sala!");
-        }
-        const { mochila, ...jogador} = entidades.splice(index, 1)[0];
 
-        return {
-            jogador: jogador,
-            sala: sala,
-            global: global!,
-            itensNoChao: itens,
-            mochila: mochila,
-            entidadesNaSala: entidades,
-        };
+        return { sala, itens, entidades };
     }
 
     static async getSalaById(db: DatabaseType, salaId: string): Promise<Sala | null> {
@@ -72,7 +71,7 @@ export class SalaRepository {
         return result && result.length > 0 ? result[0] : null;
     }
 
-    static async getSalaByNome(db: DatabaseType, sala: SalaNome): Promise<Sala | null> {
+    static async getSalaByNome(db: DatabaseType, sala: string): Promise<Sala | null> {
         const result = await db.select()
         .from(tableSalas)
         .where(eq(tableSalas.nome, sala))

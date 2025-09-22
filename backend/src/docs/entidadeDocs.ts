@@ -3,24 +3,24 @@ import { type DocPaths } from "../utils/docs.ts";
 import { acaoExtraSchema, respostaSituacao } from "./schemas.ts";
 import { Acao } from "../jogo/comandos/comandoConfig.ts";
 
-export const itemDocs = {
-    "/sala/{salaId}/item/{id}/{acao}": {
+export const entidadeDocs = {
+    "/sala/{salaId}/entidade/{id}/{acao}": {
         post: {
-            summary: "Realiza uma ação com um item",
-            description: "Realiza uma ação específica com um item que está na mochila ou no chão",
+            summary: "Realiza uma ação com uma entidade",
+            description: "Realiza uma ação específica com uma entidade que está na sala ou na mochila",
             schema: {
                 params: z.object({
                     salaId: z.uuid().meta({
-                        description: "ID da sala onde o item está localizado",
+                        description: "ID da sala onde a entidade está localizada",
                         example: "UUID",
                     }),
                     id: z.uuid().meta({
-                        description: "ID do item com a qual realizar a ação",
+                        description: "ID da entidade com a qual realizar a ação",
                         example: "UUID",
                     }),
                     acao: z.preprocess((s) => typeof s === "string" ? s.toUpperCase() : s, z.enum(Acao).meta({
                         description: "Ação a ser realizada",
-                        example: "pegar",
+                        example: "ABRIR",
                     })),
                 }),
                 body: acaoExtraSchema.optional(),

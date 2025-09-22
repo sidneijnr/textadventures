@@ -1,8 +1,10 @@
 export class APIError extends Error {
     status: number
-    constructor(message: string, status: number) {
+    json: object | null = null
+    constructor(message: string, status: number, json: object | null) {
         super(message);
         this.status = status;
+        this.json = json;
     }
 }
 
@@ -64,7 +66,7 @@ export const doFetchApi = async <T>(method: string, route: string, request?: obj
    
     console.log("apiFetch", method, url);
     let fetchRes = await fetch(url, {
-        cache: "no-store", // next 15
+        //cache: "no-store", // next 15
         credentials: "include", // Necessário para enviar cookies cross-origin
         ...fetchOptions,
         headers: headers,
@@ -83,7 +85,7 @@ export const doFetchApi = async <T>(method: string, route: string, request?: obj
         let json: unknown = await fetchRes.json();
 
         if(!success) {
-            throw new APIError(JSON.stringify(json, null, 2), fetchRes.status);
+            throw new APIError(JSON.stringify(json, null, 2), fetchRes.status, json as object);
         } else {
             return json as T;
         }
@@ -91,7 +93,7 @@ export const doFetchApi = async <T>(method: string, route: string, request?: obj
         let text: string = await fetchRes.text();
 
         if(!success) {
-            throw new APIError(text, fetchRes.status);
+            throw new APIError(text, fetchRes.status, { message: text });
         } else {
             return text as T;
         }
@@ -100,28 +102,27 @@ export const doFetchApi = async <T>(method: string, route: string, request?: obj
 export type RespostaItens = {
     id: string;
     nome: string;
-    descricao?: string;
     quantidade: number;
     atualizadoEm: string;
+    descricao?: string;
+    acoes?: string[] | null;
 }
 
 export type RespostaEntidades = {
     id: string;
     categoria: string;
     tipo: string;
-    descricao?: string;
     username?: string;
     atualizadoEm: string;
+    descricao?: string;
+    acoes?: string[] | null;
+    itens?: RespostaItens[] | null;
 }
 
 export type RespostaSituacao = {
     resposta: string;
-    jogador: {
-        id: string;
-        username: string;
+    jogador: RespostaEntidades & {
         ondeId: string;
-        mochila?: RespostaItens[] | null;
-        atualizadoEm: string;
     };
     sala: RespostaSala;
 }
@@ -129,23 +130,30 @@ export type RespostaSituacao = {
 export type RespostaSala = {
     id: string;
     nome: string;
+    atualizadoEm: string;
+    acoes?: string[] | null;
     descricao?: string;
     itens?: RespostaItens[] | null;
     entidades?: RespostaEntidades[] | null;
-    conexoes?: string[] | null;
-    atualizadoEm: string;
 }
+
+export type RespostaJogoInfo = { 
+    usuario: { username: string; createdAt: string; }, 
+    jogador: RespostaEntidades & { ondeId: string; }, 
+    usuariosCadastrados: number; 
+    usuariosOnline: number 
+};
 
 export const fetchClient = {
     login: (username: string, password: string) => doFetchApi<{ user: { username: string; createdAt: string; } }>("post", "/auth/login", { body: { username, password } }),
     cadastrar: (username: string, password: string) => doFetchApi<{ user: { username: string; createdAt: string; } }>("post", "/auth/cadastrar", { body: { username, password } }),
+    info: () => doFetchApi<RespostaJogoInfo>("get", "/auth/info"),
     logout: () => doFetchApi<void>("post", "/auth/logout"),
     
-    salaOlhar: () => doFetchApi<{ sala: RespostaSala } & RespostaSituacao>("get", "/sala/olhar"),
-    salaMover: (direcao: string) => doFetchApi<RespostaSituacao>("post", "/sala/mover", { body: { direcao } }),
-    itemPegar: (item: string, quantidade?: number) => doFetchApi<RespostaSituacao>("post", "/item/pegar", { body: { item, quantidade } }),
-    itemLargar: (item: string, quantidade?: number) => doFetchApi<RespostaSituacao>("post", "/item/largar", { body: { item, quantidade } }),
-    itemAcao: (item: string, acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/item/acao", { body: { item, acao, extra } }),
+    salaOlhar: (salaId: string) => doFetchApi<{ sala: RespostaSala } & RespostaSituacao>("get", "/sala/{salaId}/olhar", { params: { salaId } }),
+    salaMover: (salaId: string, acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/sala/{salaId}/{acao}", { params: { salaId, acao }, body: extra }),
+    itemAcao: (salaId: string, item: string, acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/sala/{salaId}/item/{id}/{acao}", { params: { salaId, id: item, acao }, body: extra }),
+    entidadeAcao: (salaId: string, entidade: string, acao: string, extra?: object) => doFetchApi<RespostaSituacao>("post", "/sala/{salaId}/entidade/{id}/{acao}", { params: { salaId, id: entidade, acao }, body: extra }),
 };
 
 // */

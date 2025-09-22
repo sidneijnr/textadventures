@@ -4,21 +4,21 @@ export interface EstadoItem {
 
 export type Estado = Record<string, EstadoItem | EstadoItem[] | string | number | boolean | null>;
 
-export type ItemInfo = {
-    id: string;
-    nome: string;
-    pilhaId: string;
-    quantidade: number;
-    quantidadeInicial: number | null;
-    ondeId: string;
-    criadoEm: Date;
-    atualizadoEm: Date;
-    estado: Estado | null;
-};
+export type MaybePromise<T> = T | Promise<T>;
 
-export type SalaInfo = {
-    id: string;
-    nome: string;
-    atualizadoEm: Date;
-    estado: Estado | null;
-};
+export type ArrowOrValue<T> = T | (() => MaybePromise<T>);
+
+export const execArrowOrValue = async <T>(arrowOrValue: ArrowOrValue<T>) => {
+    if(typeof arrowOrValue === "function" && !("nome" in arrowOrValue)) {
+        return await (arrowOrValue as () => T | Promise<T>)();
+    } else {
+        return arrowOrValue;
+    }
+}
+
+export class JogoError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "JogoError";
+    }
+}

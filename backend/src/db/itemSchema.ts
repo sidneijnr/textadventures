@@ -1,12 +1,9 @@
-import { pgTable, uuid, varchar, jsonb, check, type AnyPgColumn, timestamp, integer, uniqueIndex, pgEnum, char, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, jsonb, check, type AnyPgColumn, timestamp, integer, uniqueIndex, pgEnum, char, index, boolean } from 'drizzle-orm/pg-core';
 import { getTupleFromKeys, UUID_ZERO } from './utils.ts';
 import { relations } from 'drizzle-orm';
 import { tableEntidades } from './entidadeSchema.ts';
 import { tableSalas } from './salaSchema.ts';
-import { itens } from '../jogo/config.ts';
 import type { Estado } from '../jogo/types.ts';
-
-export const enumItemNome = pgEnum('item_nome', getTupleFromKeys(itens));
 
 export const tableLocais = pgTable('locais', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -16,7 +13,7 @@ export const tableItens = pgTable('itens', {
     id: uuid('id').primaryKey().defaultRandom(),
 
     // Que item é esse (ex: "espada", "pocao", "chave")
-    nome: enumItemNome('nome').notNull(),
+    nome: varchar('nome', { length: 255 }).notNull(),
 
     // ID da pilha, calculado a partir do estado
     // Ex: "pedra", "espada-999", "pocao-12345"
@@ -29,6 +26,9 @@ export const tableItens = pgTable('itens', {
     
     // Onde o item está atualmente, se onde ele está for deletado, o item também será deletado (onDelete cascade)
     ondeId: uuid('onde_id').references(() => tableLocais.id, { onDelete: 'cascade' }).notNull(),
+
+    // Indica de está seguro, por exemplo, em uma mochila ou dentro de um baú que não some.
+    seguro: boolean('seguro').default(false).notNull(),
 
     criadoEm: timestamp('criado_em', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     atualizadoEm: timestamp('atualizado_em', { mode: 'date', withTimezone: true }).defaultNow().notNull(),

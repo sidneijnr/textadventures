@@ -12,6 +12,10 @@ import postgres from "postgres";
 const connectionString = process.env.POSTGRES_URL;
 if (!connectionString) { throw new Error("POSTGRES_URL is not set in environment variables"); }
 
+if(connectionString.includes("supabase") && (process.env.NODE_ENV !== "production" || process.env.DEBUGLOG === "true")) {
+    throw new Error("Cancelando... tentou conectar ao supabase mas o NODE_ENV está em ambiente de desenvolvimento");
+}
+
 // Disable prefetch as it is not supported for "Transaction" pool mode
 const client = postgres(connectionString, { prepare: false });
 export const db = drizzle({

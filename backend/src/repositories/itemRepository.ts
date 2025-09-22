@@ -1,8 +1,7 @@
 import { and, eq, gte, sql } from "drizzle-orm";
 import { type Item, tableItens } from "../db/itemSchema.ts";
 import { type DatabaseType } from "../db/drizzle.ts";
-import type { ItemTipo } from "../jogo/config.ts";
-import type { Estado } from "../jogo/types.ts";
+import { JogoError, type Estado } from "../jogo/types.ts";
 
 export class ItemRepository {
     static async listarPorLocal(db: DatabaseType, localId: string): Promise<Item[]> {
@@ -19,6 +18,7 @@ export class ItemRepository {
         quantidade: number, 
         ondeId?: string, 
         pilhaId?: string, 
+        seguro?: boolean,
         estado?: Estado | null
     }) {
         return await db.transaction(async (tx: any) => {
@@ -32,6 +32,7 @@ export class ItemRepository {
                 criadoEm: itemAtual.criadoEm,
                 ondeId: diff.ondeId ? diff.ondeId : itemAtual.ondeId,
                 pilhaId: diff.pilhaId ? diff.pilhaId : itemAtual.pilhaId,
+                seguro: diff.seguro || false,
                 estado: diff.estado !== undefined ? diff.estado : itemAtual.estado,
             });
         });
@@ -45,16 +46,17 @@ export class ItemRepository {
         .returning();
 
         if(!itemAtual) {
-            throw new Error("Item não existe ou não pode pegar tudo isso!");
+            throw new JogoError("Item não existe ou não pode pegar tudo isso!");
         }
         return itemAtual;
     }
 
     static async adicionarItem(db: DatabaseType, itemAtual: {
-        nome: ItemTipo,
+        nome: string,
         pilhaId: string,
         estado?: Estado | null,
         criadoEm?: Date,
+        seguro?: boolean,
         quantidade: number,
         ondeId: string
     }) {
@@ -64,6 +66,7 @@ export class ItemRepository {
             quantidade: itemAtual.quantidade,
             ondeId: itemAtual.ondeId,
             estado: itemAtual.estado && Object.keys(itemAtual.estado).length > 0 ? itemAtual.estado : null,
+            seguro: itemAtual.seguro || false,            
             criadoEm: sql<Date>`NOW()`,
             atualizadoEm: sql<Date>`NOW()`,
         }).onConflictDoUpdate({

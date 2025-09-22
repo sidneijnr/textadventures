@@ -1,59 +1,40 @@
 import z from "zod";
 import { type DocPaths } from "../utils/docs.ts";
-import { respostaSituacao } from "./schemas.ts";
+import { acaoExtraSchema, respostaSituacao } from "./schemas.ts";
+import { Acao } from "../jogo/comandos/comandoConfig.ts";
 
 export const salaDocs = {
-    "/sala/olhar": {
+    "/sala/{salaId}/olhar": {
         get: {
             summary: "Descreve a sala atual",
             description: "Retorna a descrição completa da sala onde o jogador se encontra, incluindo saídas, itens no chão e outras entidades visíveis.",
             schema: {
-                response: respostaSituacao.extend({
-                    sala: z.object({
-                        id: z.string().meta({ example: "Inicio" }),
-                        localId: z.uuid().meta({ example: "UUID" }),
-                        descricao: z.string().meta({
-                            example: "Você está em uma sala iluminada. Há uma porta ao norte e uma janela ao sul.",
-                        }),
-                        conexoes: z.array(z.string()).meta({
-                            example: ["N", "S"],
-                        }),
-                        atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-                        itens: z.array(z.object({
-                            id: z.uuid().meta({ example: "UUID" }),
-                            tipo: z.string().meta({ example: "pedra" }),
-                            quantidade: z.number().meta({ example: 1 }),
-                            descricao: z.string().meta({ example: "Uma pedra comum." }),
-                            atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-                        })),
-                        entidades: z.array(z.object({
-                            id: z.uuid().meta({ example: "UUID" }),
-                            localId: z.uuid().meta({ example: "UUID" }),
-                            categoria: z.string().meta({ example: "JOGADOR" }),
-                            tipo: z.string().meta({ example: "JOGADOR" }),
-                            username: z.string().meta({ example: "usuario123" }),
-                            atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-                            descricao: z.string().meta({ example: "" }),
-                        })).optional(),
-                    }),
-                    resposta: z.string().meta({
-                        example: "Está tudo escuro aqui.",
-                    }),
-                })
+                params: z.object({
+                    salaId: z.uuid().meta({
+                        description: "ID da sala com a qual realizar a ação",
+                        example: "UUID",
+                    })
+                }),
+                response: respostaSituacao
             }
         }
     },
-    "/sala/mover": {
+    "/sala/{salaId}/{acao}": {
         post: {
-            summary: "Move o jogador para uma direção",
-            description: "Tenta mover o jogador para uma sala adjacente na direção especificada (ex: norte, sul, leste, oeste).",
+            summary: "Faz uma ação na sala",
+            description: "Tenta mover o jogador para uma sala adjacente na direção especificada (ex: n, s, l, o).",
             schema: {
-                body: z.object({
-                    direcao: z.string().toUpperCase().meta({
-                        description: "Direção para a qual se mover.",
-                        example: "norte",
+                params: z.object({
+                    salaId: z.uuid().meta({
+                        description: "ID da sala com a qual realizar a ação",
+                        example: "UUID",
                     }),
+                    acao: z.preprocess((s) => typeof s === "string" ? s.toUpperCase() : s, z.enum(Acao).meta({
+                        description: "Ação a ser realizada",
+                        example: "n",
+                    })),
                 }),
+                body: acaoExtraSchema.optional(),
                 response: respostaSituacao
             }
         }

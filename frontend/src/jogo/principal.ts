@@ -1,6 +1,7 @@
-import anyAscii from "any-ascii";
 import { passwordPrompt, prompt, termPrint } from "../terminal";
-import { APIError, fetchClient, type RespostaEntidades, type RespostaItens, type RespostaSala, type RespostaSituacao } from "../utils/fetchApi";
+import { APIError, fetchClient, type RespostaEntidades, type RespostaItens, type RespostaJogoInfo, type RespostaSala, type RespostaSituacao } from "../utils/fetchApi";
+import { CommandParser, ParserError } from "../utils/commandParser";
+import { Acao, type AcaoValue, acoesConfig } from "../utils/comandoConfig";
 
 type ComponenteAtualizavel = { id: string, atualizadoEm: string };
 function mudouAlgo(_obj1: undefined | null | ComponenteAtualizavel | ComponenteAtualizavel[], _obj2?: null | ComponenteAtualizavel | ComponenteAtualizavel[]) {
@@ -19,13 +20,15 @@ function mudouAlgo(_obj1: undefined | null | ComponenteAtualizavel | ComponenteA
     return false;
 }
 
-function descreverTudo(situacao: RespostaSituacao, situacaoAnterior?: RespostaSituacao | null) {
+function descreverTudo(situacao: RespostaSituacao, situacaoAnterior?: Partial<RespostaSituacao> | null) {
     const { resposta, sala, jogador } = situacao;
 
     termPrint(resposta);
 
-    let mudouSala = sala.id !== situacaoAnterior?.sala.id;
-    if(mudouSala || sala.descricao !== situacaoAnterior?.sala.descricao) {
+    const acoes = new Set<string>();
+
+    let mudouSala = sala.id !== situacaoAnterior?.sala?.id;
+    if(mudouSala || sala.descricao !== situacaoAnterior?.sala?.descricao) {
         termPrint(sala.descricao?.trim() || "");
     }
 
@@ -33,27 +36,40 @@ function descreverTudo(situacao: RespostaSituacao, situacaoAnterior?: RespostaSi
         termPrint("Você vê aqui:");
         for(let item of sala.itens) {
             termPrint(`  ${item.quantidade} ${item.descricao?.trim()}`);
+            if(item.acoes && item.acoes.length > 0) {
+                item.acoes.forEach(a => acoes.add(a));
+            }
         }
     }
 
-    const entidades = sala.entidades?.filter(e => 
-        (e.tipo !== "JOGADOR" || (Date.now() - new Date(e.atualizadoEm).getTime() <= 1000 * 60 * 10)) 
-        && e.username !== jogador.username
-    ) || [];
+    const entidades = sala.entidades;
     if(entidades && entidades.length > 0 && (mudouSala || mudouAlgo(entidades, situacaoAnterior?.sala?.entidades))) {
         termPrint("está aqui:");
         for(let entidade of entidades) {
-            if(entidade.id !== jogador.username) {
-                termPrint(`  ${entidade.tipo === "JOGADOR" ? entidade.username : entidade.tipo} ${entidade.descricao?.trim()}`);
+            termPrint(`  ${entidade.descricao?.trim()}`);
+            if(entidade.acoes && entidade.acoes.length > 0) {
+                entidade.acoes.forEach(a => acoes.add(a));
+            }
+            if(entidade.itens && entidade.itens.length > 0) {
+                termPrint("  que contém:");
+                for(let item of entidade.itens) {
+                    termPrint(`     ${item.quantidade} ${item.descricao?.trim() || item.nome}`);
+                    if(item.acoes && item.acoes.length > 0) {
+                        item.acoes.forEach(a => acoes.add(a));
+                    }
+                }
             }
         }
     }
     
-    if(mudouAlgo(jogador.mochila, situacaoAnterior?.jogador?.mochila)) {
-        if(jogador.mochila && jogador.mochila.length > 0) {
+    if(mudouAlgo(jogador.itens, situacaoAnterior?.jogador?.itens)) {
+        if(jogador.itens && jogador.itens.length > 0) {
             termPrint("Na sua mochila você tem:");
-            for(let item of jogador.mochila) {
+            for(let item of jogador.itens) {
                 termPrint(`  ${item.quantidade} ${item.descricao?.trim() || item.nome}`);
+                if(item.acoes && item.acoes.length > 0) {
+                    item.acoes.forEach(a => acoes.add(a));
+                }
             }
         } else {
             termPrint("Sua mochila está vazia.");
@@ -61,21 +77,21 @@ function descreverTudo(situacao: RespostaSituacao, situacaoAnterior?: RespostaSi
     }
 
     if(mudouSala) {
-        if(sala.conexoes && sala.conexoes.length > 0) {
-            termPrint("conexões:");
-            for(let conexao of sala.conexoes) {
-                termPrint(`  ${conexao}`);
+        if(sala.acoes && sala.acoes.length > 0) {
+            termPrint("Direções:");
+            for(let conexao of sala.acoes) {
+                termPrint(`  ${conexao.length > 2 ? conexao.toLowerCase() : conexao}`);
             }
         }
+    }
+    if(acoes.size > 0) {
+        termPrint("Ações:", Array.from(acoes).map(a => a.length > 2 ? a.toLowerCase() : a).sort().join(", "));
     }
 
     return {
         resposta,
         jogador,
-        sala: {
-            ...sala,
-            entidades: entidades,
-        }
+        sala
     };
 }
 
@@ -114,98 +130,172 @@ const fazerLogin = async () => {
     }
 }
 
-export const principal = async () => {
+export const desambiguar = async (
+    mensagem: string,
+    acao: string, 
+    alvos: Record<string, { sinonimos: string[], ref: RespostaItens | RespostaEntidades }>, 
+    alvosMatch: {match: string, confidence: number}[],
+    arg: number
+) => {
+    let item: RespostaItens[] = [];
+    let entidade: RespostaEntidades[] = [];
+    for(let result of alvosMatch) {
+        const alvo = alvos[result.match]?.ref;
+        if("tipo" in alvo) {
+            if(arg !== 1 || alvo.acoes?.includes(acao))
+            entidade.push(alvo);
+        } else {
+            if(arg !== 1 || alvo.acoes?.includes(acao))
+            item.push(alvo as RespostaItens);
+        }
+    }
+
+    if((item.length + entidade.length) > 1 && (!acao || acoesConfig[acao as AcaoValue].args >= arg)) {
+        termPrint(mensagem);
+        let k = 0;
+        for(; k < item.length; k++) {
+            const i = item[k];
+            termPrint(`  ${String.fromCharCode(k + "A".charCodeAt(0))}: ${i.quantidade} ${i.descricao?.trim() || ""} (${i.acoes?.join(", ")})`);
+        }
+        for(; k < entidade.length; k++) {
+            const e = entidade[k];
+            termPrint(`  ${String.fromCharCode(k + "A".charCodeAt(0))}: ${e.descricao?.trim() || ""} (${e.acoes?.join(", ")})`);
+        }
+        const escolha = (await prompt("Escolha um: ")).trim();
+        const escolhaNum = escolha.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+        if(isNaN(escolhaNum) || escolhaNum < 0) {
+            termPrint("Escolha inválida.");
+            return {item: undefined, entidade: undefined };
+        }
+
+        if(escolhaNum < item.length) {
+            item = [item[escolhaNum]];
+            entidade = [];
+        } else if (escolhaNum - item.length < entidade.length) {
+            entidade = [entidade[escolhaNum - item.length]];
+            item = [];
+        } else {
+            termPrint("Escolha inválida.");
+            return {item: undefined, entidade: undefined };
+        }
+    }
+
+    return { item: item.at(0), entidade: entidade.at(0) };
+}
+
+export const principal = async (jogoInfo?: RespostaJogoInfo) => {
     let situacao: RespostaSituacao | null = null;
     while(true) {
         try {
-            if(!situacao || !situacao.sala || !situacao.jogador) {
-                situacao = descreverTudo(await fetchClient.salaOlhar(), null);
+            if(!jogoInfo || !jogoInfo.jogador || !situacao || !situacao.sala || !situacao.jogador) {
+                if(!jogoInfo || !jogoInfo.jogador) {
+                    jogoInfo = await fetchClient.info();
+                    termPrint("Olá novamente", jogoInfo.jogador.username);
+                    termPrint("Online última vez em", new Date(jogoInfo.jogador.atualizadoEm).toLocaleString());
+                    termPrint("");
+                    if(jogoInfo.usuariosCadastrados !== undefined && jogoInfo.usuariosOnline !== undefined) {
+                        termPrint(`Há ${jogoInfo.usuariosCadastrados} usuários cadastrados, ${jogoInfo.usuariosOnline} online agora.`);
+                    }
+                    termPrint("");
+                }
+                let salaId = situacao?.sala?.id || situacao?.jogador?.ondeId || jogoInfo?.jogador?.ondeId;
+                situacao = descreverTudo(await fetchClient.salaOlhar(salaId), null);
             }
 
             let { sala, jogador } = situacao;
+            
+            const alvos = CommandParser.buildContext(situacao);
+            const parser = new CommandParser(await prompt(jogador.username+"> "), { alvos });
+            const { acao, quantidade, alvoA: _alvoA, alvoB: _alvoB, resto } = parser.parse();
 
-            const comando = (await prompt(jogador.username+"> ")).trim().toUpperCase();
-            let partes = comando.split(" ").map(p => anyAscii(p.replaceAll(/[\r\n\t]/g," ").trim())).filter(p => {
-                return p.length > 0
-            });
+            const alvoA = await desambiguar("Seja mais específico: ", acao, alvos, _alvoA, 1);
+            const alvoB = await desambiguar("Com oq? ", acao, alvos, _alvoB, 2);
 
-            let acao = partes.length > 0 ? partes[0] : undefined;
-            const args = partes.slice(1);
-
-            // A FAZER: processar isso melhor kk
-            if(!acao || acao === "OLHAR") {
+            if(!acao || acao === Acao.Mochila || (!alvoA.entidade && !alvoA.item && acao === Acao.Olhar)) {
                 // Apenas olhar ao redor
-                situacao = descreverTudo(await fetchClient.salaOlhar(), null);
-            } else if (acao === "MOCHILA") {
-                let _situacao = situacao;
-                situacao = await fetchClient.salaOlhar();
-                descreverTudo(situacao, { ..._situacao, jogador: { ..._situacao.jogador, mochila: null } });
-            } else if (acao === "SAIR") {
+                if(acao === Acao.Mochila) {
+                    situacao = descreverTudo(await fetchClient.salaOlhar(situacao.sala.id), { ...situacao, jogador: undefined });
+                } else {
+                    situacao = descreverTudo(await fetchClient.salaOlhar(situacao.sala.id), { ...situacao, sala: undefined});
+                }
+            } else if(acao === Acao.Ajuda) {
+                termPrint("Você pode usar comandos como:");
+                termPrint("  norte");
+                termPrint("  pegar pedra");
+                termPrint("  largar 3 pedra");
+                termPrint("  abrir porta");
+                termPrint("  colocar no bau moedas");
+                termPrint("");
+                termPrint("  mochila - para ver o que você está carregando");
+                termPrint("  olhar - para olhar ao redor novamente");
+                termPrint("  ajuda - para ver esta mensagem novamente");
+                termPrint("  logout - para sair do jogo.");
+                termPrint("");
+                const resposta = await prompt("Deseja ver a lista completa de ações? (S/N) ");
+                if(resposta.trim().toUpperCase() === "S" || resposta.trim().toUpperCase() === "SIM") {
+                    termPrint(" Ação: Sinônimo1, Sinônimo2, ...");
+                    for(let acaoKey in acoesConfig) {
+                        const acao = acaoKey as AcaoValue;
+                        termPrint(`  ${acao.length > 2 ? acao.toLowerCase() : acao}: ${acoesConfig[acao].sinonimos.join(", ").toLowerCase()}`);
+                    }
+
+                    termPrint("");
+                    termPrint("Comandos devem seguir uma das seguintes estruturas:");
+                    termPrint("  <Ação>");
+                    termPrint("  ir <Direção>");
+                    termPrint("  <Ação> <Alvo>");
+                    termPrint("  <Ação> <Quantidade> <Alvo>");
+                    termPrint("  <Ação> <AlvoA> <AlvoB>");
+                    termPrint("  usando <Alvo> <Ação>");
+                    termPrint("  usando <AlvoA> <Ação> <AlvoB>");
+                    termPrint("");
+                    termPrint("Onde:");
+                    termPrint("  <Ação>: Uma ação válida (ver lista acima)");
+                    termPrint("  <Direção>: Uma direção (N, S, L, O, NORTE, SUL, etc)");
+                    termPrint("  <Alvo>, <AlvoA>, <AlvoB>: Um item ou entidade visível");
+                    termPrint("  <Quantidade>: Um número (ex: 3)");
+                    termPrint("");
+                    termPrint("Artigos, preposições e contrações são ignoradas, como 'o', 'de', 'na', 'numa', etc.");
+                }
+            } else if (acao === Acao.Logout) {
                 await fetchClient.logout();
                 termPrint("Até mais!");
                 break;
-            } else if (acao === "PEGAR") {
-                let quantidade = 1;
-                if(args[0].match(/^\d+$/)) {
-                    quantidade = parseInt(args[0]);
-                    args.shift();
-                }
-                const itemId = sala.itens?.find(i => i.nome.toUpperCase() === args[0])?.id;
-                if(!itemId) {
-                    termPrint("Não tem isso aqui.");
-                    continue;
-                }
-
-                situacao = descreverTudo(await fetchClient.itemPegar(itemId, quantidade), situacao);                
-            } else if(acao === "LARGAR") {
-                let quantidade = 1;
-                if(args[0].match(/^\d+$/)) {
-                    quantidade = parseInt(args[0]);
-                    args.shift();
-                }
-                const itemId = jogador.mochila?.find(i => i.nome.toUpperCase() === args[0])?.id;
-                if(!itemId) {
-                    termPrint("Você não tem isso.");
-                    continue;
-                }
-
-                situacao = descreverTudo(await fetchClient.itemLargar(itemId, quantidade), situacao);
-            } else if (acao === "ESCREVER" || acao === "LER") { // Melhorar isso...
-                let itemId = jogador.mochila?.find(i => i.nome.toUpperCase() === args[0])?.id;
-                if(!itemId) {
-                    itemId = sala.itens?.find(i => i.nome.toUpperCase() === args[0])?.id;
-                    if(!itemId) {
-                        termPrint("Não tem isso aqui e nem você.");
-                        continue;
-                    }
-                }
-
-                if(acao === "ESCREVER") {
-                    const texto = args.slice(1).join(" ") || "";
-                    situacao = descreverTudo(await fetchClient.itemAcao(itemId, acao, { texto }), situacao);
-                } else {
-                    situacao = descreverTudo(await fetchClient.itemAcao(itemId, acao), situacao);
-                }
             } else {
-                switch(acao) {
-                    case "NORTE": acao = "N"; break;
-                    case "SUL": acao = "S"; break;
-                    case "LESTE": acao = "L"; break;
-                    case "OESTE": acao = "O"; break;
+                if(alvoA.item) {
+                    situacao = descreverTudo(await fetchClient.itemAcao(situacao.sala.id, alvoA.item.id, acao, { quantidade, item: alvoB.item?.id, entidade: alvoB.entidade?.id, texto: resto || undefined }), situacao);
+                } else if(alvoA.entidade) {
+                    situacao = descreverTudo(await fetchClient.entidadeAcao(situacao.sala.id, alvoA.entidade.id, acao, { quantidade, item: alvoB.item?.id, entidade: alvoB.entidade?.id, texto: resto || undefined }), situacao);
+                } else {
+                    situacao = descreverTudo(await fetchClient.salaMover(situacao.sala.id, acao, { quantidade, item: alvoB.item?.id, entidade: alvoB.entidade?.id, texto: resto || undefined }), situacao);
                 }
-
-                situacao = descreverTudo(await fetchClient.salaMover(acao), situacao);
             }
+
         } catch(err) {
             if(err instanceof APIError && err.status === 401) {
                 termPrint("Você precisa fazer login.");
+                jogoInfo = undefined;
+                situacao = null;
                 await fazerLogin();
                 continue;
             }
 
             console.error(err);
-            termPrint("Erro:", err?.toString());
 
+            if(err instanceof ParserError) {
+                termPrint(err.message);
+                continue;
+            }
+
+            if(err instanceof APIError) {
+                termPrint((err.json as any)?.message);
+                if((err.json as any)?.ok === true) {
+                    continue;
+                }
+            } else {
+                termPrint("Erro:", (err as any)?.message);
+            }
+            
             // Pergunta se quer tentar novamente
             const tentarNovamente = (await prompt("\nQuer continuar? (S/N) ")).trim().toUpperCase();
             if(tentarNovamente !== "S" && tentarNovamente !== "SIM") {
