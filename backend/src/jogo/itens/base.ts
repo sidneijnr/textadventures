@@ -25,7 +25,7 @@ export abstract class ItemBase {
             acoes["LARGAR"] = async () => {
                 await ctx.moverItem(this, { 
                     quantidade: extra?.quantidade || this.item.quantidade,
-                    ondeId: ctx.sala.sala.id
+                    onde: ctx.sala
                 });
                 return "Largou.";
             };
@@ -33,7 +33,7 @@ export abstract class ItemBase {
             acoes["PEGAR"] = async () => {
                 await ctx.moverItem(this, { 
                     quantidade: extra?.quantidade || this.item.quantidade,
-                    ondeId: ctx.jogador.entidade.id
+                    onde: ctx.jogador
                 });
                 return "Pegou.";
             };

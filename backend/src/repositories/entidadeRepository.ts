@@ -2,7 +2,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import { tableEntidades } from "../db/entidadeSchema.ts";
 import { type DatabaseType } from "../db/drizzle.ts";
 import { tableSalas } from "../db/salaSchema.ts";
-import type { Estado } from "../jogo/types.ts";
+import { JogoError, type Estado } from "../jogo/types.ts";
 import { tableItens } from "../db/itemSchema.ts";
 
 export class EntidadeRepository {
@@ -16,7 +16,7 @@ export class EntidadeRepository {
         .where(eq(tableEntidades.id, entidadeId))
         .returning();
 
-        if(result.length === 0) throw new Error("Entidade foi deletada: "+entidadeId);
+        if(result.length === 0) throw new JogoError("Entidade foi deletada: "+entidadeId);
         return result[0];
     }
 
@@ -25,7 +25,7 @@ export class EntidadeRepository {
         .where(and(eq(tableEntidades.id, entidadeId), eq(tableEntidades.ondeId, ondeId)))
         .returning();
 
-        if(result.length === 0) throw new Error("Entidade não foi encontrada ou não estava onde esperado: "+entidadeId);
+        if(result.length === 0) throw new JogoError("Entidade não foi encontrada ou não estava onde esperado: "+entidadeId);
         return result[0];
     }
 

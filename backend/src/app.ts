@@ -1,8 +1,8 @@
-import "dotenv/config";
 import express from "express";
 import cors from "cors";
-
 import cookieSession from "cookie-session";
+
+import "./config.ts";
 import { COOKIE_NAME, COOKIE_OPTIONS } from "./middlewares/authMiddleware.ts";
 import routes from "./routes/index.ts";
 
@@ -57,9 +57,8 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"], // Com Bearer token é necessário permitir o cabeçalho Authorization
     credentials: true, // Se utilizar cookies, habilitar isso
-    // maxAge: 86400, // Cache the preflight response for 24 hours?
+    maxAge: 3600, // Cache the preflight response for 1 hour (3600 seconds) - Evita muitas requisições OPTIONS
 }));
-
 
 // habilitando o uso de json pelo express
 app.use(express.json());

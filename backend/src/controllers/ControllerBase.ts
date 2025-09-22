@@ -5,6 +5,7 @@ import type { User } from "../db/userSchema.ts";
 import { parseRequest, type ControllerSchema, type ParsedRequest, type ParsedRequestUndef } from "../utils/docs.ts";
 import { SalaRepository } from "../repositories/salaRepository.ts";
 import { db } from "../db/drizzle.ts";
+import { RevokeSessionError } from "../middlewares/authMiddleware.ts";
 
 export class ControllerBase {
     static async loadRequest<Q extends z.ZodType, B extends z.ZodType, P extends z.ZodType, R extends z.ZodType>(
@@ -19,11 +20,12 @@ export class ControllerBase {
         const usuario = req.session! as User;
         const parsed = parseRequest(schema, req) as any;
 
-        const {global, ondeId} = await SalaRepository.dadosIniciaisJogador(db, usuario.username);
-        if(!ondeId || !global) {
-            throw new Error("Usuário ou entidade não existe!");
+        const salaId = parsed.params?.salaId;
+        if(!salaId) {
+            throw new RevokeSessionError("ID da sala é obrigatório"); // Para parar a execução
         }
-        const ctx = new Contexto(await Contexto.carregar(usuario.username, ondeId, global));
+
+        const ctx = new Contexto(await Contexto.carregar(usuario.username, salaId));
 
         return {
             ctx,

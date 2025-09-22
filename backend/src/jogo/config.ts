@@ -13,6 +13,7 @@ import { itensPadrao } from "./itens/inicio.ts";
 
 import { SalaBase, SalaGlobal, type SalaBaseStatic } from "./salas/base.ts";
 import { entidadesInicio, salaasInicio } from "./salas/inicio.ts";
+import { entidadesClareira, salasClareira } from "./salas/clareira.ts";
 
 const _itensArray: (typeof ItemBase & ItemBaseStatic)[] = [
     ...Object.values(itensPadrao)
@@ -25,6 +26,7 @@ for(let classe of _itensArray) {
 const _salasArray: (typeof SalaBase & SalaBaseStatic)[] = [
     SalaGlobal,
     ...Object.values(salaasInicio),
+    ...Object.values(salasClareira)
 ];
 export const _salas: Map<string, typeof SalaBase & SalaBaseStatic> = new Map();
 for(let classe of _salasArray) {
@@ -35,7 +37,8 @@ const _entidadesArray: (typeof EntidadeBase & EntidadeBaseStatic)[] = [
     EntidadeJogador,
     ...Object.values(entidadesContainer),
     ...Object.values(entidadesPorta),
-    ...Object.values(entidadesInicio)
+    ...Object.values(entidadesInicio),
+    ...Object.values(entidadesClareira)
 ];
 export const _entidades: Map<string, typeof EntidadeBase & EntidadeBaseStatic> = new Map();
 for(let classe of _entidadesArray) {

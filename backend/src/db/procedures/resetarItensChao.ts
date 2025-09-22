@@ -20,12 +20,7 @@ export class ProcedureResetarItensChao {
 
             -- 2. Remove itens que estão no chão há mais de 10 minutos sem atualização, ou que zeraram sua quantidade
             DELETE FROM itens WHERE quantidade_inicial IS NULL AND (
-                atualizado_em < NOW() - INTERVAL '10 minutes'
-                AND id IN (
-                    SELECT itens.id
-                    FROM itens
-                    INNER JOIN salas ON itens.onde_id = salas.id
-                )
+                atualizado_em < NOW() - INTERVAL '10 minutes' AND seguro = FALSE
                 OR quantidade < 1
             );
 

@@ -202,12 +202,8 @@ export class CommandParser<T> {
         }
 
         if(!oq.texto) {
-            if(acao === Acao.Olhar) {
-                return { acao, quantidade, alvoA: [], alvoB: [], resto: this.args.slice(this.lastArgsi).join(" ") };
-            } else {
-                // Comando que precisa de alvo, mas não tem, pode ser qualquer um
-                return { acao, quantidade, alvoA: this.findBestMatch("", this.context.alvos), alvoB: this.findBestMatch("", this.context.alvos), resto: this.args.slice(this.lastArgsi).join(" ") };
-            }
+            // Comando que precisa de alvo, mas não tem, pode ser qualquer um
+            return { acao, quantidade, alvoA: this.findBestMatch("", this.context.alvos), alvoB: this.findBestMatch("", this.context.alvos), resto: this.args.slice(this.lastArgsi).join(" ") };
         }
 
         const alvoA = this.findBestMatch(oq.texto, this.context.alvos);

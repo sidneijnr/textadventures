@@ -3,45 +3,42 @@ import { db } from "../db/drizzle.ts";
 import { gerarPilhaId, getEntidadeConfig, getItemConfig, getSalaConfig } from "./config.ts";
 
 import { SalaRepository } from "../repositories/salaRepository.ts";
-import type { EntidadeJogador } from "./entidades/jogador.ts";
+import { EntidadeJogador } from "./entidades/jogador.ts";
 import type { AcoesCallbackResult, SalaBase, SalaBaseStatic } from "./salas/base.ts";
 import type { ItemBase, ItemBaseStatic } from "./itens/base.ts";
 import type { EntidadeBase } from "./entidades/base.ts";
 import { EntidadeRepository } from "../repositories/entidadeRepository.ts";
 import type { Sala } from "../db/salaSchema.ts";
 import type { Item } from "../db/itemSchema.ts";
-import { execArrowOrValue, type Estado } from "./types.ts";
+import { execArrowOrValue, JogoError, type Estado } from "./types.ts";
 import { ItemRepository } from "../repositories/itemRepository.ts";
 import type { Entidade } from "../db/entidadeSchema.ts";
 import e from "express";
 import { Acao } from "./comandos/comandoConfig.ts";
+import { RevokeSessionError } from "../middlewares/authMiddleware.ts";
 
 // Serve como service que interage com o banco de dados, e guarda o estado atual do jogo
 export class Contexto {
     jogador: EntidadeJogador;
     sala: SalaBase;
-    global: SalaBase;
 
     private str: string;
-    constructor({ sala, global, jogador }: {
+    constructor({ sala, jogador }: {
         sala: SalaBase,
-        global: SalaBase,
         jogador: EntidadeJogador
     }) {
         this.sala = sala;
-        this.global = global;
         this.jogador = jogador;
         this.str = "";      
     }
 
-    static async carregar(username: string, ondeId: string, global: Sala) {
+    static async carregar(username: string, ondeId: string) {
         const { sala, entidades, itens } = await SalaRepository.carregarSalaCompleta(db, ondeId);
 
         const salaItens: ItemBase[] = [];
         const salaEntidades: EntidadeBase[] = [];
         let jogador: EntidadeJogador | undefined = undefined;
         const salaConfig = await getSalaConfig(sala.nome, { sala: sala, itens: salaItens, entidades: salaEntidades });
-        const globalConfig = await getSalaConfig(global.nome, { sala: global });
                 
         for(let item of itens) {
             const itemConfig = await getItemConfig(item.nome, { item: item, onde: salaConfig });
@@ -76,12 +73,11 @@ export class Contexto {
         }
 
         if(!jogador) {
-            throw new Error("Jogador não encontrado na sala!");
+            throw new RevokeSessionError("Jogador não encontrado na sala!");
         }
 
         return {
             sala: salaConfig,
-            global: globalConfig,
             jogador: jogador
         };
     }
@@ -241,21 +237,20 @@ export class Contexto {
     async moverParaSala(novaSala: typeof SalaBase & SalaBaseStatic) {
         const { entidade, sala } = (await EntidadeRepository.moveParaSalaNome(db, this.jogador.entidade.id, novaSala.nome)) || {};
         if(!entidade || !sala) {
-            throw new Error("Erro ao mover para a sala " + novaSala.nome);
+            throw new JogoError("Erro ao mover para a sala " + novaSala.nome);
         }
         
-        const info = await Contexto.carregar(this.jogador.entidade.username!, sala.id, this.global.sala);
+        const info = await Contexto.carregar(this.jogador.entidade.username!, sala.id);
         this.sala = info.sala;
-        this.global = info.global;
         this.jogador = info.jogador;
     }    
     
-    async moverItem(i: ItemBase, { quantidade, ondeId, estado }: { 
+    async moverItem(i: ItemBase, { quantidade, onde, estado }: { 
         quantidade: number,
-        ondeId: string | null,
+        onde: SalaBase | EntidadeBase | null,
         estado?: Estado | null,
     }) {
-        if(ondeId === null) {
+        if(onde === null) {
             // Descarta o item
             await ItemRepository.removerItem(db, i.item.id, quantidade);
         } else {
@@ -265,26 +260,32 @@ export class Contexto {
             } else {
                 estado = i.item.estado;
             }
-            await ItemRepository.moverItem(db, i.item.id, { quantidade, ondeId, pilhaId: gerarPilhaId(i.item.nome, estado), estado });
+
+            const seguro = "entidade" in onde && onde.entidade.tipo === EntidadeJogador.nome;
+            const id = "sala" in onde ? onde.sala.id : onde.entidade.id;
+            await ItemRepository.moverItem(db, i.item.id, { quantidade, ondeId: id, seguro: seguro, pilhaId: gerarPilhaId(i.item.nome, estado), estado });
         }
 
         //this.mochila = null;
         //this.itensNoChao = null;
         // A FAZER: atualizar só em memória.
 
-        const info = await Contexto.carregar(this.jogador.entidade.username!, this.sala.sala.id, this.global.sala);
+        const info = await Contexto.carregar(this.jogador.entidade.username!, this.sala.sala.id);
         this.sala = info.sala;
-        this.global = info.global;
         this.jogador = info.jogador;
     }
 
-    async criarItem(item: { item: typeof ItemBase & ItemBaseStatic, estado?: Estado | null, quantidade: number, ondeId: string }) {
+    async criarItem(item: { item: typeof ItemBase & ItemBaseStatic, estado?: Estado | null, quantidade: number, onde: SalaBase | EntidadeBase }) {
+        const onde = item.onde;
+        const seguro = "entidade" in onde && onde.entidade.tipo === EntidadeJogador.nome;
+        const id = "sala" in onde ? onde.sala.id : onde.entidade.id;
         await ItemRepository.adicionarItem(db, {
             nome: item.item.nome,
             pilhaId: gerarPilhaId(item.item.nome, item.estado),
             quantidade: item.quantidade,
             estado: item.estado,
-            ondeId: item.ondeId,
+            ondeId: id,
+            seguro: seguro
         });
 
         //this.mochila = null;
@@ -292,9 +293,8 @@ export class Contexto {
         // A FAZER: atualizar só em memória.
 
 
-        const info = await Contexto.carregar(this.jogador.entidade.username!, this.sala.sala.id, this.global.sala);
+        const info = await Contexto.carregar(this.jogador.entidade.username!, this.sala.sala.id);
         this.sala = info.sala;
-        this.global = info.global;
         this.jogador = info.jogador;
     }
 
@@ -326,9 +326,8 @@ export class Contexto {
         }
         // A FAZER: atualizar só em memória.
 
-        const info = await Contexto.carregar(this.jogador.entidade.username!, this.sala.sala.id, this.global.sala);
+        const info = await Contexto.carregar(this.jogador.entidade.username!, this.sala.sala.id);
         this.sala = info.sala;
-        this.global = info.global;
         this.jogador = info.jogador;
     }
     

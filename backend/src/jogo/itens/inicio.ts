@@ -33,24 +33,20 @@ class Lampiao extends ItemBase {
     }
     acoes(ctx: Contexto): AcoesCallbackResult {
         const item = this.item;
-        return {
-            "ACENDER": async () => {
-                if(item.estado?.luz) {
-                    return "O lampião já está aceso.";
-                } else {
-                    await ctx.moverItem(this, { ondeId: item.ondeId, quantidade: 1, estado: { luz: true } });
-                    return "Você acende o lampião.";
-                }
-            },
-            "APAGAR": async () => {
-                if(item.estado?.luz) {
-                    await ctx.moverItem(this, { ondeId: item.ondeId, quantidade: 1, estado: { luz: false } });
-                    return "Você apaga o lampião.";
-                } else {
-                    return "O lampião já está apagado.";
-                }
+        const acoes: AcoesCallbackResult = {};
+        if(item.estado?.luz) {
+            acoes["APAGAR"] = async () => {
+                await ctx.moverItem(this, { onde: this.onde, quantidade: 1, estado: { luz: false } });
+                return "Você apaga o lampião.";
             }
-        };
+        } else {
+            acoes["ACENDER"] = async () => {
+                await ctx.moverItem(this, { onde: this.onde, quantidade: 1, estado: { luz: true } });
+                return "Você acende o lampião.";
+            }
+        }
+
+        return acoes;
     }
 }
 class Papel extends ItemBase {
@@ -84,7 +80,7 @@ class Papel extends ItemBase {
                     txt = extra.texto.replaceAll(/[^\x20-\x7E]+/g,"").substring(0,1024);
                 }
 
-                await ctx.moverItem(this, { ondeId: item.ondeId, quantidade: 1, estado: { texto: txt } });
+                await ctx.moverItem(this, { onde: this.onde, quantidade: 1, estado: { texto: txt } });
                 if(txt) {
                     return "Você escreve no papel.";
                 } else {

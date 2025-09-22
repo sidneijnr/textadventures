@@ -1,6 +1,6 @@
 import z from "zod";
 import type { DocPaths } from "../utils/docs.ts";
-import { authUserSchema } from "./schemas.ts";
+import { authUserSchema, respostaEntidade, respostaSituacao } from "./schemas.ts";
 
 export const authDocs = {
     "/auth/cadastrar": {
@@ -44,5 +44,43 @@ export const authDocs = {
             summary: "Faz logout do usuário atual",
             description: "Encerra a sessão do usuário atualmente autenticado.",
         }
-    }
+    },
+    "/auth/info": {
+        get: {
+            summary: "Informações do usuário autenticado",
+            description: "Retorna informações sobre o usuário atualmente autenticado, incluindo detalhes do jogador e estatísticas do jogo.",
+            schema: {
+                response: z.object({
+                    usuario: z.object({
+                        username: z.string().meta({
+                            description: "Nome de usuário do usuário",
+                            example: "usuario123",
+                        }),
+                        createdAt: z.string().meta({
+                            description: "Data de criação do usuário",
+                            example: "2023-10-05T14:48:00.000Z",
+                        }),
+                    }).meta({
+                        description: "Informações básicas do usuário",
+                    }),
+                    jogador: respostaEntidade.omit({ itens: true }).extend({
+                        ondeId: z.string().meta({
+                            description: "ID da sala onde o jogador está localizado",
+                            example: "Inicio",
+                        }),
+                    }).meta({
+                        description: "Detalhes do jogador associado ao usuário",
+                    }),
+                    usuariosCadastrados: z.number().meta({
+                        description: "Número total de usuários cadastrados no sistema",
+                        example: 15,
+                    }),
+                    usuariosOnline: z.number().meta({
+                        description: "Número de usuários atualmente online",
+                        example: 1,
+                    }),
+                })
+            }
+        }
+    },
 } satisfies DocPaths;

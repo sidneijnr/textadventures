@@ -4,12 +4,16 @@ import { acaoExtraSchema, respostaSituacao } from "./schemas.ts";
 import { Acao } from "../jogo/comandos/comandoConfig.ts";
 
 export const itemDocs = {
-    "/item/{id}/{acao}": {
+    "/sala/{salaId}/item/{id}/{acao}": {
         post: {
             summary: "Realiza uma ação com um item",
             description: "Realiza uma ação específica com um item que está na mochila ou no chão",
             schema: {
                 params: z.object({
+                    salaId: z.uuid().meta({
+                        description: "ID da sala onde o item está localizado",
+                        example: "UUID",
+                    }),
                     id: z.uuid().meta({
                         description: "ID do item com a qual realizar a ação",
                         example: "UUID",

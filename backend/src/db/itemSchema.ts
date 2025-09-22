@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, jsonb, check, type AnyPgColumn, timestamp, integer, uniqueIndex, pgEnum, char, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, jsonb, check, type AnyPgColumn, timestamp, integer, uniqueIndex, pgEnum, char, index, boolean } from 'drizzle-orm/pg-core';
 import { getTupleFromKeys, UUID_ZERO } from './utils.ts';
 import { relations } from 'drizzle-orm';
 import { tableEntidades } from './entidadeSchema.ts';
@@ -26,6 +26,9 @@ export const tableItens = pgTable('itens', {
     
     // Onde o item está atualmente, se onde ele está for deletado, o item também será deletado (onDelete cascade)
     ondeId: uuid('onde_id').references(() => tableLocais.id, { onDelete: 'cascade' }).notNull(),
+
+    // Indica de está seguro, por exemplo, em uma mochila ou dentro de um baú que não some.
+    seguro: boolean('seguro').default(false).notNull(),
 
     criadoEm: timestamp('criado_em', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     atualizadoEm: timestamp('atualizado_em', { mode: 'date', withTimezone: true }).defaultNow().notNull(),

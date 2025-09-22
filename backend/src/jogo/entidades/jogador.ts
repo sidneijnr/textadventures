@@ -29,7 +29,7 @@ export class EntidadeJogador extends EntidadeBase {
                     }
                     await ctx.moverItem(item, { 
                         quantidade: extra?.quantidade || item.item.quantidade,
-                        ondeId: this.entidade.id
+                        onde: this
                     });
                     return "Você entrega o item.";
                 }
@@ -49,5 +49,9 @@ export class EntidadeJogador extends EntidadeBase {
         } else {
             return { itens: [], filhos: [] };
         }
+    }
+
+    terminouTutorial(): boolean {
+        return this.entidade.estado?.terminouTutorial === true;
     }
 }

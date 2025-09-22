@@ -6,6 +6,7 @@ import type { ItemBase } from "../itens/base.ts";
 import { itensPadrao } from "../itens/inicio.ts";
 import type { Estado, MaybePromise } from "../types.ts";
 import { SalaBase, type AcoesCallbackResult, type ItemInicial } from "./base.ts";
+import { salasClareira } from "./clareira.ts";
 
 class Quarto extends SalaBase {
     static nome = "Quarto";
@@ -31,7 +32,18 @@ class Quarto extends SalaBase {
     acoes(ctx: Contexto): AcoesCallbackResult {
         return {
             "S": Inicio,
-            "DORMIR": () => {
+            "DORMIR": async () => {
+                if(!ctx.jogador.terminouTutorial()) {
+                    const moedas = ctx.jogador.obterItensPorNome(itensPadrao.Moedas).at(0);
+                    if(moedas && moedas.item.quantidade >= 100) {
+                        ctx.escrevaln("Você deita na cama e dorme por um tempo...");
+                        ctx.escrevaln("** BAM! (som de pedras caindo) **");
+                        ctx.escrevaln();
+                        ctx.escrevaln("Um barulho alto te acorda, parece que algo quebrou na sala ao lado.");
+                        await ctx.alterarEntidade(ctx.jogador, { estado: { terminouTutorial: true } });
+                        return;
+                    }
+                }
                 return "Você deita na cama e dorme por um tempo, mas nada mudou quando acorda.";
             }
         };
@@ -54,7 +66,11 @@ class Inicio extends SalaBase {
     static estadoInicial = (): Estado => ({ luz: true });
 
     descricao(ctx: Contexto) {
-        return "Você acorda em uma sala sem janelas (subsolo?), você não sabe porquê está aqui, ao norte há um quarto, Ao leste há uma porta";
+        if(!ctx.jogador.terminouTutorial()) {
+            return "Você acorda em uma sala sem janelas (subsolo?), você não sabe porquê está aqui, ao norte há um quarto, Ao leste há uma porta";
+        } else {
+            return "Você está em uma sala com um buraco enorme na parede a oeste, ao norte há um quarto, Ao leste há uma porta";
+        }
     }
 
     acoes(ctx: Contexto): AcoesCallbackResult {
@@ -66,7 +82,10 @@ class Inicio extends SalaBase {
                     return "A Porta está fechada";
                 }
                 return Labirinto1
-            }
+            },
+            ...(ctx.jogador.terminouTutorial() ? {
+                "O": salasClareira.BuracoNaParede
+            }: {})
         };
     }
 }
@@ -109,7 +128,10 @@ class Labirinto2 extends Labirinto {
         return {
             "O": Labirinto1,
             "S": Labirinto5,
-            "N": Labirinto4
+            "N": () => {
+                ctx.escrevaln("Você sobe em uma pedra para passar mas tropeça e cai...");
+                return Labirinto4
+            }
         };
     }
 }
@@ -140,6 +162,10 @@ class EntidadePoco extends EntidadeBase {
             return {
                 "SUBIR": () => {
                     if(corda) {
+                        const pedras = ctx.jogador.obterItensPorNome(itensPadrao.Pedra).at(0);
+                        if(pedras && pedras.item.quantidade > 1) {
+                            return "Você tenta subir a corda, mas está carregando pedras demais...";
+                        }
                         ctx.escrevaln("Você sobe a corda e chega de volta na sala com o poço.");
                         return Labirinto3;
                     } else {
@@ -160,7 +186,7 @@ class EntidadePoco extends EntidadeBase {
                 ...(!corda ? {"AMARRAR": async () => {
                     const jogadorCorda = ctx.jogador.obterItensPorNome(itensPadrao.Corda).at(0);
                     if(jogadorCorda) {
-                        await ctx.moverItem(jogadorCorda, { quantidade: 1, ondeId: this.entidade.id });
+                        await ctx.moverItem(jogadorCorda, { quantidade: 1, onde: this });
                         return "Você amarra a corda no poço, agora dá para descer por ela.";
                     } else {
                         return "Você não tem nenhuma corda para amarrar no poço.";
@@ -193,7 +219,9 @@ class Labirinto3 extends Labirinto {
 
     acoes(ctx: Contexto): AcoesCallbackResult {
         return {
-            "N": Labirinto3,
+            "N": () => {
+                ctx.escrevaln("A passagem dá algumas voltas e você acaba voltando para onde estava.");
+            },
             "S": Labirinto6
         };
     }
@@ -223,7 +251,10 @@ class Labirinto4 extends Labirinto {
     acoes(ctx: Contexto): AcoesCallbackResult {
         return {
             "N": Labirinto1,
-            "O": Labirinto7,
+            "O": () => {
+                ctx.escrevaln("Você passa por uma passagem estreita cheia de curvas")
+                return Labirinto7
+            },
             "L": Labirinto5
         };
     }
@@ -260,8 +291,13 @@ class Labirinto7 extends Labirinto {
 
     acoes(ctx: Contexto): AcoesCallbackResult {
         return {
-            "N": Labirinto7,
-            "O": Labirinto4,
+            "N": () => {
+                ctx.escrevaln("O caminho ficou muito estreito e não deu para passar...");
+            },
+            "O": () => {
+                ctx.escrevaln("Você passa por uma passagem estreita cheia de curvas")
+                return Labirinto4
+            },
             "L": Labirinto8
         };
     }
@@ -277,7 +313,10 @@ class Labirinto8 extends Labirinto {
 
     acoes(ctx: Contexto): AcoesCallbackResult {
         return {
-            "N": Labirinto5,
+            "N": () => {
+                ctx.escrevaln("Você sobe em uma pedra para passar mas tropeça e cai...");
+                return Labirinto5;
+            },
             "O": Labirinto7,
             "L": Labirinto9
         };
@@ -294,7 +333,10 @@ class Labirinto9 extends Labirinto {
 
     acoes(ctx: Contexto): AcoesCallbackResult {
         return {
-            "N": Labirinto6,
+            "N": () => {
+                ctx.escrevaln("Você sobe em uma pedra para passar mas tropeça e cai...");
+                return Labirinto6;
+            },
             "O": Labirinto8,
             "SUBIR": Caverna        
         };

@@ -6,7 +6,7 @@ import type { AcaoExtraPopulado, SalaBase, SalaBaseStatic } from "../jogo/salas/
 
 export class EntidadeController extends ControllerBase {
     static acaoEntidade: RequestHandler = async (req, res) => {
-        const { ctx, body, params } = await this.loadRequest(entidadeDocs["/entidade/{id}/{acao}"].post.schema, req, res);
+        const { ctx, body, params } = await this.loadRequest(entidadeDocs["/sala/{salaId}/entidade/{id}/{acao}"].post.schema, req, res);
         const entidadeId = params.id;
         
         const achouEntidade = ctx.getEntidadeVisivel(entidadeId);

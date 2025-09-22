@@ -6,6 +6,7 @@ import { AuthController } from "../controllers/authController.ts";
 import { SalaController } from "../controllers/salaController.ts";
 import { EntidadeController } from "../controllers/entidadeController.ts";
 import { ItemController } from "../controllers/itemController.ts";
+import { JogoError } from "../jogo/types.ts";
 
 const routes = (app: Express) => {
 	// Só fazer log das rotas se estiver em desenvolvimento, desativar em produção
@@ -18,13 +19,12 @@ const routes = (app: Express) => {
 	router.post("/auth/cadastrar", AuthController.cadastrar);
 	router.post("/auth/login", AuthController.login);
 	router.post("/auth/logout", AuthController.logout);
+	router.get("/auth/info", authMiddleware, AuthController.info);
 
-	router.post("/item/:id/:acao", authMiddleware, ItemController.acaoItem);
-
-	router.get("/sala/olhar", authMiddleware, SalaController.descreverSalaAtual);
-	router.post("/sala/:acao", authMiddleware, SalaController.executarAcao);
-
-	router.post("/entidade/:id/:acao", authMiddleware, EntidadeController.acaoEntidade);
+	router.get( "/sala/:salaId/olhar", authMiddleware, SalaController.descreverSalaAtual);
+	router.post("/sala/:salaId/item/:id/:acao", authMiddleware, ItemController.acaoItem);
+	router.post("/sala/:salaId/entidade/:id/:acao", authMiddleware, EntidadeController.acaoEntidade);
+	router.post("/sala/:salaId/:acao", authMiddleware, SalaController.executarAcao);
 
     app.use(
         getDocsRouter(),
@@ -38,6 +38,10 @@ const routes = (app: Express) => {
 	// Por último o middleware de tratamento de erros
 	app.use(((error, req, res, next) => {
         console.error(error);
+
+		if(error instanceof JogoError) {
+			res.status(400).json({ ok: true, message: error.message });
+		}
 
 		if(error instanceof RevokeSessionError) {
 			res.status(error.message === "OK" ? 200 : 401)

@@ -1,26 +1,35 @@
 import z from "zod";
 
+export const respostaItem = z.object({
+    id: z.uuid().meta({ example: "UUID" }),
+    tipo: z.string().meta({ example: "pedra" }),
+    quantidade: z.number().meta({ example: 1 }),
+    atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
+    descricao: z.string().meta({ example: "Uma pedra comum." }),
+    acoes: z.array(z.string().meta({ example: "LARGAR" })),
+});
+
+export const respostaEntidade = z.object({
+    id: z.string().meta({ example: "Inicio" }),
+    tipo: z.string().meta({ example: "JOGADOR" }),
+    username: z.string().meta({
+        example: "usuario123",
+    }),
+    descricao: z.string().meta({ example: "" }),
+    acoes: z.array(z.string().meta({ example: "FALAR" })),
+    itens: z.array(respostaItem).optional(),
+    criadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
+    atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
+});
+
 export const respostaSituacao = z.object({
     resposta: z.string().meta({
         example: "Você não pode fazer isso.",
     }),
-    jogador: z.object({
-        id: z.string().meta({ example: "Inicio" }),
-        username: z.string().meta({
-            example: "usuario123",
-        }),
+    jogador: respostaEntidade.extend({
         ondeId: z.string().meta({
             example: "Inicio",
         }),
-        atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-        mochila: z.array(z.object({
-            id: z.uuid().meta({ example: "UUID" }),
-            tipo: z.string().meta({ example: "pedra" }),
-            quantidade: z.number().meta({ example: 1 }),
-            atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-            descricao: z.string().meta({ example: "Uma pedra comum." }),
-            acoes: z.array(z.string().meta({ example: "LARGAR" })),
-        })).optional()
     }),
     sala: z.object({
         id: z.string().meta({ example: "Inicio" }),
@@ -31,22 +40,8 @@ export const respostaSituacao = z.object({
             example: ["N", "S"],
         }),
         atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-        itens: z.array(z.object({
-            id: z.uuid().meta({ example: "UUID" }),
-            tipo: z.string().meta({ example: "pedra" }),
-            quantidade: z.number().meta({ example: 1 }),
-            atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-            descricao: z.string().meta({ example: "Uma pedra comum." }),
-            acoes: z.array(z.string().meta({ example: "PEGAR" })),
-        })).optional(),
-        entidades: z.array(z.object({
-            id: z.uuid().meta({ example: "UUID" }),
-            tipo: z.string().meta({ example: "JOGADOR" }),
-            username: z.string().meta({ example: "usuario123" }),
-            atualizadoEm: z.iso.datetime().meta({ example: "2023-10-05T14:48:00.000Z" }),
-            descricao: z.string().meta({ example: "" }),
-            acoes: z.array(z.string().meta({ example: "FALAR" })),
-        })).optional(),
+        itens: z.array(respostaItem).optional(),
+        entidades: z.array(respostaEntidade).optional(),
     }).optional(),
 });
 

@@ -29,7 +29,7 @@ class Bau extends EntidadeBase {
                     }
                     await ctx.moverItem(item, { 
                         quantidade: extra?.quantidade || item.item.quantidade,
-                        ondeId: this.entidade.id
+                        onde: this
                     });
                     return "Colocou no baú.";
                 },

@@ -15,3 +15,10 @@ export const execArrowOrValue = async <T>(arrowOrValue: ArrowOrValue<T>) => {
         return arrowOrValue;
     }
 }
+
+export class JogoError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "JogoError";
+    }
+}

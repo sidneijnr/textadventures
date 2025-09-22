@@ -6,13 +6,13 @@ import type { SalaBase, AcaoExtraPopulado, SalaBaseStatic } from "../jogo/salas/
 
 export class SalaController extends ControllerBase {
     static descreverSalaAtual: RequestHandler = async (req, res) => {
-        const { ctx } = await this.loadRequest(salaDocs["/sala/olhar"].get.schema, req, res);
+        const { ctx, params } = await this.loadRequest(salaDocs["/sala/{salaId}/olhar"].get.schema, req, res);
 
         await this.sendResponse(ctx, req, res);
     }
 
     static executarAcao: RequestHandler = async (req, res) => {
-        const { ctx, body, params } = await this.loadRequest(salaDocs["/sala/{acao}"].post.schema, req, res);
+        const { ctx, body, params } = await this.loadRequest(salaDocs["/sala/{salaId}/{acao}"].post.schema, req, res);
 
         const sala = ctx.sala;
 
