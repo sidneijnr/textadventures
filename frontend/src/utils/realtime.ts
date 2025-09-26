@@ -55,14 +55,16 @@ export const inicializarRealtime = (username: string, salaId: string, callback: 
         })
         .on("presence", { event: "join" }, ({ newPresences, currentPresences }) => {
             for(let p of newPresences) {
-                if(!p || !p.username || typeof p.username !== "string" || p.username === username) continue;
-                fnCallbackChatMsg(true, `${p.username} entrou no jogo.`, "");
+                const pUsername = p?.username || p.name;
+                if(pUsername === username) continue;
+                fnCallbackChatMsg(true, `${pUsername} entrou no jogo.`, "");
             }
         })
         .on("presence", { event: "leave" }, ({ leftPresences, currentPresences }) => {
             for(let p of leftPresences) {
-                if(!p || !p.username || typeof p.username !== "string" || p.username === username) continue;
-                fnCallbackChatMsg(true, `${p.username} saiu do jogo.`, "");
+                const pUsername = p?.username || p.name;
+                if(pUsername === username) continue;
+                fnCallbackChatMsg(true, `${pUsername} saiu do jogo.`, "");
             }
         })
         .subscribe(async (status) => {
